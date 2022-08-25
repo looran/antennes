@@ -5,10 +5,13 @@ features:
 * each KML placemark for a _support_ contain informations about _stations_, _emetteurs_ and _antennes_ present on the site
 * each KML placemark is colored in orange if it has been modified in the last 3 month and red if in the last month
 
-You can download pre-generated KML files [here](https://ferme.ydns.eu/antennes/), with 3 files per month:
-* `anfr_YYYY-MM_kmls.zip` [~100MB] archive containing everything: all-in-one KML file, KML files splitted per proprietaires/departements and statistics
-* `anfr_YYYY-MM.kml` [~200MB] all-in-one KML file alone
-* `anfr_YYYY-MM_stats.txt` [~2KB] statistics alone
+You can download pre-generated KML files [here](https://ferme.ydns.eu/antennes/), with 2 files per month period:
+* `anfr_YYYY-MM.kml` [~200MB] all-in-one KML file for the period with all _supports_
+* `anfr_YYYY-MM_stats.txt` [~2KB] statistics for the period
+Additionally in `split/` you can find for each period:
+* `split/anfr_YYYY-MM_departement/anfr_YYYY-MM_departement_<dept-id>.kml` [<30MB] a KML file with _supports_ for a single _departement_
+* `split/anfr_YYYY-MM_proprietaire/anfr_YYYY-MM_proprietaire_<prop-id>_<prop-name>.kml` [<10MB] a KML file with _supports_ owned by a single _proprietaire_
+* `split/anfr_YYYY-MM_kml_split.zip` [~60MB] archive containing all split kml files
 
 ![example usage: antennes KML file imported in Google Earth](doc/antennes_googleearth.png)<br/>
 _example usage: antennes KML file imported in Google Earth_
