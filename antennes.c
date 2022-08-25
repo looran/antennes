@@ -34,34 +34,9 @@
 #include <time.h>
 #include <libgen.h>
 
-#define KML_HEADER \
-	"<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n" \
-	"<kml xmlns=\"http://www.opengis.net/kml/2.2\" xmlns:gx=\"http://www.google.com/kml/ext/2.2\">\n" \
-	"<Folder id=\"ANFR antennes %s\">\n" \
-	"\t<name>ANFR antennes %s</name>\n"
-
-#define KML_DOC_START \
-	"\t<Document id=\"%d\">\n" \
-	"\t\t<name>%s</name>\n"
-
-#define KML_PLACEMARK_POINT \
-	"\t\t<Placemark id=\"%d\">\n" \
-	"\t\t\t<name>%s</name>\n" \
-	"\t\t\t<description><![CDATA[%s]]></description>\n" \
-	"\t\t\t<Point>\n" \
-	"\t\t\t\t<altitudeMode>relativeToGround</altitudeMode>\n" \
-	"\t\t\t\t<coordinates>%f,%f,%f</coordinates>\n" \
-	"\t\t\t</Point>\n" \
-	"\t\t</Placemark>\n"
-
-#define KML_DOC_END \
-	"\t</Document>\n"
-
-#define KML_FOOTER \
-	"</Folder>\n" \
-	"</kml>\n"
-
 static struct conf {
+	struct tm now;
+	int no_color;
 	int verbose;
 } conf;
 
@@ -78,6 +53,58 @@ struct csv {
 	int field_count;
 	int conv;
 };
+
+/* KML colors : AABBGGRR */
+#define KML_HEADER \
+	"<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n" \
+	"<kml xmlns=\"http://www.opengis.net/kml/2.2\" xmlns:gx=\"http://www.google.com/kml/ext/2.2\">\n" \
+	"<Folder id=\"ANFR antennes %s\">\n" \
+	"\t<name>ANFR antennes %s</name>\n" \
+	"\t<Style id=\"blue\">\n" \
+	"\t\t<IconStyle><color>ffff0000</color></IconStyle>\n" \
+	"\t</Style>\n" \
+	"\t<Style id=\"orange\">\n" \
+	"\t\t<IconStyle><color>ff0088ff</color></IconStyle>\n" \
+	"\t</Style>\n" \
+	"\t<Style id=\"red\">\n" \
+	"\t\t<IconStyle><color>ff0000ff</color></IconStyle>\n" \
+	"\t</Style>\n"
+
+#define KML_STYLE_DISABLED 0
+#define KML_STYLE_1_BLUE 1
+#define KML_STYLE_2_ORANGE 2
+#define KML_STYLE_3_RED 3
+const char *KML_STYLES[] = {
+	NULL,
+	"blue",
+	"orange",
+	"red",
+};
+
+#define KML_DOC_START \
+	"\t<Document id=\"%d\">\n" \
+	"\t\t<name>%s</name>\n"
+
+#define KML_PLACEMARK_POINT \
+	"\t\t<Placemark id=\"%d\">\n" \
+	"\t\t\t<name>%s</name>\n" \
+	"\t\t\t<description><![CDATA[%s]]></description>\n" \
+	"%s" \
+	"\t\t\t<Point>\n" \
+	"\t\t\t\t<altitudeMode>relativeToGround</altitudeMode>\n" \
+	"\t\t\t\t<coordinates>%f,%f,%f</coordinates>\n" \
+	"\t\t\t</Point>\n" \
+	"\t\t</Placemark>\n"
+
+#define KML_PLACEMARK_POINT_STYLE \
+	"\t\t\t<styleUrl>#%s</styleUrl>\n"
+
+#define KML_DOC_END \
+	"\t</Document>\n"
+
+#define KML_FOOTER \
+	"</Folder>\n" \
+	"</kml>\n"
 
 struct kml_doc {
 	int id;
@@ -206,6 +233,9 @@ struct station {
 	char *dte_modif_str;
 	struct tm dte_en_service;
 	char *dte_en_service_str;
+	/* computed */
+	struct tm dte_latest; /* most recent date from the above */
+	/* references */
 	struct emetteur *emetteurs[STATION_EMETTEUR_MAX];
 	int emetteur_count;
 	int systeme_count[SYSTEMES_ID_MAX];
@@ -238,6 +268,7 @@ struct f_station {
 	int station_count;
 	int dept_count;
 	int zone_count;
+	struct tm latest; /* latest station update date */
 };
 
 /* emetteurs have an integer id, max value of 20308500 as of 20220729 obtained by:
@@ -378,7 +409,7 @@ void		 csv_date(struct csv *, struct tm *, char **);
 /* kml */
 struct kml	*kml_open(const char *, const char *);
 void		 kml_close(struct kml *);
-void		 kml_add_placemark_point(struct kml *, int, const char *, int, char *, char *, float, float, float);
+void		 kml_add_placemark_point(struct kml *, int, const char *, int, char *, char *, float, float, float, const char *);
 /* utils */
 void		 coord_dms_to_dd(int [3], char *, int [3], char *, float *, float *);
 const char *pathable(const char *);
@@ -407,8 +438,9 @@ void		 utf8_to_iso8859(char *);
 __attribute__((__noreturn__)) void
 usageexit()
 {
-	printf("usage: antennes [-k <dir>] [-v] <data_dir>\n");
+	printf("usage: antennes [-Cv] [-k <dir>] <data_dir>\n");
 	printf("Query and export KML files from ANFR radio sites public data\n");
+	printf("-C       do not set any kml placemark colors\n");
 	printf("-k <dir> export kml files to this directory\n");
 	printf("-s       display antennes statistics\n");
 	printf("-v       verbose logging\n");
@@ -417,6 +449,8 @@ usageexit()
 	printf("   anfr.kml : all supports in a single file, one document section per proprietaire\n");
 	printf("   anfr_proprietaire/anfr_proprietaire_<proprietaire-id>_<proprietaire-name>.kml : one file per proprietaire\n");
 	printf("   anfr_departement/anfr_departement_<dept-id>.kml : one file per departement\n");
+	printf("kml placemark colors:\n");
+	printf("   orange for supports with stations updated in less than 3 months, red for 1 month, blue otherwise\n");
 	exit(1);
 }
 
@@ -427,10 +461,14 @@ main(int argc, char *argv[])
 	char dir[PATH_MAX];
 	int ch, stats = 0;
 	char *kml_export = NULL;
+	time_t now;
 
 	bzero(&conf, sizeof(conf));
-	while ((ch = getopt(argc, argv, "hk:sv")) != -1) {
+	while ((ch = getopt(argc, argv, "Chk:sv")) != -1) {
 		switch (ch) {
+			case 'C':
+				conf.no_color = 1;
+				break;
 			case 'k':
 				kml_export = optarg;
 				break;
@@ -448,6 +486,9 @@ main(int argc, char *argv[])
 	argv += optind;
 	if (argc < 1)
 		usageexit();
+
+	time(&now);
+	gmtime_r(&now, &conf.now);
 
 	info("[+] loading files from %s\n", argv[0]);
 	if (stats)
@@ -684,6 +725,7 @@ stations_load(char *path)
 	struct station_dept *dept;
 	struct station_zone *zone;
 	struct station *sta;
+	struct tm *dte_latest;
 
 	stations = xmalloc_zero(sizeof(struct f_station));
 	csv = &stations->csv;
@@ -697,12 +739,29 @@ stations_load(char *path)
 		csv_stanm(csv, &sta->sta_nm);
 		csv_int(csv, &sta->adm_id, NULL);
 		csv_int(csv, NULL, &sta->dem_nm_consis_str);
-		csv_date(csv, NULL, &sta->dte_implemntatation_str);
+		csv_date(csv, &sta->dte_implemntatation, &sta->dte_implemntatation_str);
 		csv_date(csv, &sta->dte_modif, &sta->dte_modif_str);
 		csv_date(csv, &sta->dte_en_service, &sta->dte_en_service_str);
 		sta->emetteur_count = 0;
 		bzero(sta->systeme_count, sizeof(sta->systeme_count));
 		sta->antenne_count = 0;
+
+		/* set station most recent date */
+		if (tm_diff(&sta->dte_implemntatation, &sta->dte_modif) > 0) {
+			if (tm_diff(&sta->dte_implemntatation, &sta->dte_en_service) > 0)
+				dte_latest = &sta->dte_implemntatation;
+			else
+				dte_latest = &sta->dte_en_service;
+		} else {
+			if (tm_diff(&sta->dte_modif, &sta->dte_en_service))
+				dte_latest = &sta->dte_modif;
+			else
+				dte_latest = &sta->dte_en_service;
+		}
+		memcpy(&sta->dte_latest, dte_latest, sizeof(struct tm));
+		/* update latest station date, except if date is more recent than now (incoherent data) */
+		if (tm_diff(&conf.now, dte_latest) > 0 && tm_diff(dte_latest, &stations->latest) > 0)
+			memcpy(&stations->latest, dte_latest, sizeof(struct tm));
 
 		/* insert the station in maching zone of departement */
 		if (!stations->depts[sta->sta_nm.dept]) {
@@ -911,9 +970,9 @@ station_systemes(struct f_emetteur *emetteurs, struct station *sta, char *desc)
 		lb = emetteurs->systemes_lb[id];
 		strbuf_str(desc, lb);
 		strbuf_chr(desc, ' ');
-		strbuf_chr(desc, '[');
+		strbuf_chr(desc, '(');
 		strbuf_int(desc, count);
-		strbuf_chr(desc, ']');
+		strbuf_chr(desc, ')');
 	}
 	strbuf_chr(desc, '\n');
 
@@ -1304,7 +1363,7 @@ type_antenne_get(struct f_type_antenne *types, int tae_id)
 void
 output_kml(struct anfr_set *set, const char *output_dir, const char *source_name)
 {
-	int idx, sup_count, n, len_stalist, len_desc, kml_count, departement;
+	int idx, sup_count, n, len_stalist, len_desc, kml_count, departement, style, diff;
 	struct support *sup;
 	char desc[SUPPORT_DESCRIPTION_BUF_SIZE], stalist[SUPPORT_DESCRIPTION_BUF_SIZE];
 	char path[PATH_MAX], buf[1024], buf2[128], expllist[4096];
@@ -1370,6 +1429,10 @@ output_kml(struct anfr_set *set, const char *output_dir, const char *source_name
 		stalist[0] = '\0';
 		expllist[0] = '\0';
 		len_stalist = 0;
+		if (conf.no_color == 1)
+			style = KML_STYLE_DISABLED;
+		else
+			style = KML_STYLE_1_BLUE;
 		sta = NULL;
 		for (n=0; n<sup->sta_count; n++) {
 			sta = station_get_next(set->stations, sup->sta_nm_anfr, sup->sta_count, sta);
@@ -1380,9 +1443,9 @@ output_kml(struct anfr_set *set, const char *output_dir, const char *source_name
 			exploitant_name = exploitant_get_name(set->exploitants, sta->adm_id);
 			if (expllist[0] != '\0')
 				strcat(expllist, ", ");
-			snprintf(buf, sizeof(buf), "%s [%d]", exploitant_name, sta->emetteur_count);
+			snprintf(buf, sizeof(buf), "%s (%d)", exploitant_name, sta->emetteur_count);
 			strcat(expllist, buf);
-			len_desc += sprintf(desc+len_desc, "#%d %s '%s' %s %s [%d]\n    ",
+			len_desc += sprintf(desc+len_desc, "#%d %s '%s' %s %s (%d)\n    ",
 					n+1, sta->sta_nm.str, exploitant_name, sta->dte_modif_str, sta->dte_en_service_str, sta->emetteur_count);
 			len_desc += station_systemes(set->emetteurs, sta, desc+len_desc);
 			len_stalist += sprintf(stalist+len_stalist, "-------------------\nstation #%d %s '%s'\n",
@@ -1390,6 +1453,19 @@ output_kml(struct anfr_set *set, const char *output_dir, const char *source_name
 			len_stalist += station_description(set->types_antenne, sta, stalist + len_stalist);
 			if (len_stalist >= sizeof(stalist))
 				errx(1, "output_kml: description station list output size %d exceeded buffer size %lu", len_stalist, sizeof(stalist));
+			/* update support style based of station time */
+			if (style != KML_STYLE_DISABLED && style < KML_STYLE_3_RED) {
+				diff = tm_diff(&conf.now, &sta->dte_latest);
+				if (diff < 0) {
+					style = KML_STYLE_3_RED; /* if support latest date is more recent than now, mark it as recent anyway */
+				} else {
+					diff = tm_diff(&set->stations->latest, &sta->dte_latest);
+					if (diff < 30)
+						style = KML_STYLE_3_RED;
+					else if (style == KML_STYLE_1_BLUE && diff < 90)
+						style = KML_STYLE_2_ORANGE;
+				}
+			}
 		}
 		memcpy(desc+len_desc, stalist, len_stalist+1);
 		len_desc += len_stalist;
@@ -1398,12 +1474,12 @@ output_kml(struct anfr_set *set, const char *output_dir, const char *source_name
 		/* name */
 		buf2[0] = '\0';
 		if (sup->sta_count > 1)
-			snprintf(buf2, sizeof(buf2), "%d: ", sup->sta_count);
+			snprintf(buf2, sizeof(buf2), "[%d] ", sup->sta_count);
 		snprintf(buf, sizeof(buf), "%s%s", buf2, expllist);
 		/* append placemark to kmls */
-		kml_add_placemark_point(k_tpo,  sup->tpo_id, tpo_name, sup->sup_id, buf, desc, sup->lat, sup->lon, (float)sup->sup_nm_haut);
-		kml_add_placemark_point(k_dept, sup->tpo_id, tpo_name, sup->sup_id, buf, desc, sup->lat, sup->lon, (float)sup->sup_nm_haut);
-		kml_add_placemark_point(k_all,   sup->tpo_id, tpo_name, sup->sup_id, buf, desc, sup->lat, sup->lon, (float)sup->sup_nm_haut);
+		kml_add_placemark_point(k_tpo,  sup->tpo_id, tpo_name, sup->sup_id, buf, desc, sup->lat, sup->lon, (float)sup->sup_nm_haut, KML_STYLES[style]);
+		kml_add_placemark_point(k_dept, sup->tpo_id, tpo_name, sup->sup_id, buf, desc, sup->lat, sup->lon, (float)sup->sup_nm_haut, KML_STYLES[style]);
+		kml_add_placemark_point(k_all,   sup->tpo_id, tpo_name, sup->sup_id, buf, desc, sup->lat, sup->lon, (float)sup->sup_nm_haut, KML_STYLES[style]);
 	}
 
 	/* close all kml files */
@@ -1612,9 +1688,10 @@ kml_close(struct kml *kml)
 }
 
 void
-kml_add_placemark_point(struct kml *kml, int doc_id, const char *doc_name, int id, char *name, char *description, float lat, float lon, float haut)
+kml_add_placemark_point(struct kml *kml, int doc_id, const char *doc_name, int id, char *name, char *description, float lat, float lon, float haut, const char *styleurl)
 {
 	char buf[SUPPORT_DESCRIPTION_BUF_SIZE];
+	char buf2[256];
 	int len, idx;
 	struct kml_doc *doc;
 
@@ -1637,7 +1714,10 @@ kml_add_placemark_point(struct kml *kml, int doc_id, const char *doc_name, int i
 	}
 
 	/* append to placemarks in this document */
-	len = snprintf(buf, sizeof(buf), KML_PLACEMARK_POINT, id, name, description, lon, lat, haut);
+	if (styleurl) {
+		snprintf(buf2, sizeof(buf2), KML_PLACEMARK_POINT_STYLE, styleurl);
+	}
+	len = snprintf(buf, sizeof(buf), KML_PLACEMARK_POINT, id, name, description, buf2, lon, lat, haut);
 	if (len >= sizeof(buf))
 		errx(1, "kml_add_placemark_point internal buffer limit reached (%d)", len);
 	doc->placemarks = realloc(doc->placemarks, doc->placemarks_size + len);
@@ -1705,10 +1785,14 @@ xmalloc_zero(size_t size)
 	return p;
 }
 
+/* returns a positive value if 'a' is older than 'b', negative value if 'b' older than 'a' and 0 if 'a' equals 'b'.
+ * the value is the number of days of difference. only year, month and day are compared */
 int
 tm_diff(struct tm *a, struct tm *b)
 {
-	if (a->tm_year < b->tm_year)
+	int diff = 0;
+
+	/* XXX if (a->tm_year < b->tm_year)
 		return -1;
 	if (a->tm_year > b->tm_year)
 		return 1;
@@ -1719,9 +1803,12 @@ tm_diff(struct tm *a, struct tm *b)
 	if (a->tm_mday < b->tm_mday)
 		return -1;
 	if (a->tm_mday > b->tm_mday)
-		return 1;
+		return 1; */
+	diff += (a->tm_year - b->tm_year) * 365;
+	diff += (a->tm_mon - b->tm_mon) * 30;
+	diff += a->tm_mday - b->tm_mday;
 
-	return 0;
+	return diff;
 }
 
 int

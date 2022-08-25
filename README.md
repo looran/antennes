@@ -1,5 +1,10 @@
 ## antennes - Query and export KML files from ANFR radio sites data
 
+features:
+* generates KML files of emetteurs sites for all France and per-departement and per-proprietaire of the _support_
+* each KML placemark for a _support_ contain informations about _stations_, _emetteurs_ and _antennes_ present on the site
+* each KML placemark is colored in orange if it has been modified in the last 3 month and red if in the last month
+
 You can download pre-generated KML files [here](https://ferme.ydns.eu/antennes/), with 3 files per month:
 * `anfr_YYYY-MM_kmls.zip` [~100MB] archive containing everything: all-in-one KML file, KML files splitted per proprietaires/departements and statistics
 * `anfr_YYYY-MM.kml` [~200MB] all-in-one KML file alone
@@ -11,8 +16,9 @@ _example usage: antennes KML file imported in Google Earth_
 # Usage
 
 ```
-usage: antennes [-k <dir>] [-v] <data_dir>
+usage: antennes [-Cv] [-k <dir>] <data_dir>
 Query and export KML files from ANFR radio sites public data
+-C       do not set any kml placemark colors
 -k <dir> export kml files to this directory
 -s       display antennes statistics
 -v       verbose logging
@@ -21,6 +27,8 @@ output kml files hierarchy:
    anfr.kml : all supports in a single file, one document section per proprietaire
    anfr_proprietaire/anfr_proprietaire_<proprietaire-id>_<proprietaire-name>.kml : one file per proprietaire
    anfr_departement/anfr_departement_<dept-id>.kml : one file per departement
+kml placemark colors:
+   orange for supports with stations updated in less than 3 months, red for 1 month, blue otherwise
 ```
 
 # Build
