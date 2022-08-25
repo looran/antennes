@@ -1,4 +1,4 @@
-## antennes - Query and export KML files from ANFR radio sites text files
+## antennes - Query and export KML files from ANFR radio sites public data
 
 You can download pre-generated KML files [here](https://ferme.ydns.eu/antennes/), with 3 files per month:
 * `anfr_YYYY-MM_kmls.zip` [~100MB] archive containing everything: all-in-one KML file, KML files splitted per proprietaires/departements and statistics
@@ -12,7 +12,7 @@ _example usage: antennes KML file imported in Google Earth_
 
 ```
 usage: antennes [-k <dir>] [-v] <data_dir>
-Query and export KML files from ANFR radio sites text files
+Query and export KML files from ANFR radio sites public data
 -k <dir> export kml files to this directory
 -s       display antennes statistics
 -v       verbose logging
