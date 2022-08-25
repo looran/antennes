@@ -1,6 +1,6 @@
 ## antennes - Query and export KML files from ANFR radio sites text files
 
-You can download pre-generated KML files [https://ferme.ydns.eu/antennes/](here), with 3 files per month:
+You can download pre-generated KML files [here](https://ferme.ydns.eu/antennes/), with 3 files per month:
 * `anfr_YYYY-MM_kmls.zip` [~100MB] archive containing everything: all-in-one KML file, KML files splitted per proprietaires/departements and statistics
 * `anfr_YYYY-MM.kml` [~200MB] all-in-one KML file alone
 * `anfr_YYYY-MM_stats.txt` [~2KB] statistics alone
