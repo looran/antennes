@@ -7,8 +7,8 @@ Features:
 * Each placemark is colored in red or orange if it has received modifications in the last 1 or 3 months
 
 You can download [pre-generated KML files here](https://ferme.ydns.eu/antennes/), with 2 files per month period:
-* `anfr_YYYY-MM.kml` [~200MB]
-all-in-one KML file for the period with all _supports_
+* `anfr_YYYY-MM_departements.kml` [~200MB] KML file containing all _supports_ organised by department
+* `anfr_YYYY-MM_proprietaires.kml` [~200MB] KML file containing all _supports_ organised by proprietaire
 * `anfr_YYYY-MM_stats.txt` [~2KB] statistics for the period
 
 Additionally in [`split/`](https://ferme.ydns.eu/antennes/split/) you can find the splited KML files for each period:
