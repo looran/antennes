@@ -107,7 +107,7 @@ SUP_TYPE_ANTENNE.txt
 
 # Requirements
 
-4GB of RAM
+5GB of free RAM
 
 # Ressources
 

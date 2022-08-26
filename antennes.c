@@ -320,6 +320,7 @@ struct bande {
 /* antennes have an integer id, max value of 7878184 as of 20220729 obtained by:
  * $ cut -d';' -f2 tmp/extract/SUP_ANTENNE.txt  |sort -n |tail -n1 */
 #define ANTENNE_ID_MAX 10000000
+#define ANTENNE_EMETTEUR_MAX 50
 struct f_antenne {
 	struct csv csv;
 	struct antenne *table[ANTENNE_ID_MAX];
@@ -339,6 +340,8 @@ struct antenne {
 	float aer_nb_alt_bas;
 	char *aer_nb_alt_bas_str;
 	char *sup_id_str;
+	struct emetteur *emetteurs[ANTENNE_EMETTEUR_MAX];
+	int emetteur_count;
 };
 
 #define TYPE_ANTENNE_ID_MAX 150
@@ -380,7 +383,7 @@ int					 station_systemes(struct f_emetteur *, struct station *, char *);
 struct f_exploitant	*exploitants_load(char *);
 void				 exploitants_free(struct f_exploitant *);
 const char			*exploitant_get_name(struct f_exploitant *, int);
-struct f_emetteur	*emetteurs_load(char *, struct f_station *);
+struct f_emetteur	*emetteurs_load(char *, struct f_station *, struct f_antenne *);
 void				 emetteurs_free(struct f_emetteur *);
 const char *		 emetteurs_stats(struct f_emetteur *);
 struct emetteur		*emetteur_get(struct f_emetteur *, int);
@@ -503,14 +506,14 @@ main(int argc, char *argv[])
 	set.stations = stations_load(dir);
 	snprintf(dir, sizeof(dir), "%s/SUP_EXPLOITANT.txt", argv[0]);
 	set.exploitants = exploitants_load(dir);
-	snprintf(dir, sizeof(dir), "%s/SUP_EMETTEUR.txt", argv[0]);
-	set.emetteurs = emetteurs_load(dir, set.stations);
-	snprintf(dir, sizeof(dir), "%s/SUP_BANDE.txt", argv[0]);
-	set.bandes = bandes_load(dir, set.emetteurs);
 	snprintf(dir, sizeof(dir), "%s/SUP_ANTENNE.txt", argv[0]);
 	set.antennes = antennes_load(dir, set.stations);
 	snprintf(dir, sizeof(dir), "%s/SUP_TYPE_ANTENNE.txt", argv[0]);
 	set.types_antenne = types_antenne_load(dir);
+	snprintf(dir, sizeof(dir), "%s/SUP_EMETTEUR.txt", argv[0]);
+	set.emetteurs = emetteurs_load(dir, set.stations, set.antennes);
+	snprintf(dir, sizeof(dir), "%s/SUP_BANDE.txt", argv[0]);
+	set.bandes = bandes_load(dir, set.emetteurs);
 
 	if (stats) {
 		info("[*] displaying statistics\n");
@@ -524,10 +527,10 @@ main(int argc, char *argv[])
 
 #ifdef DEBUG
 	info("[*] freeing ressources\n");
-	types_antenne_free(set.types_antenne);
-	antennes_free(set.antennes);
 	bandes_free(set.bandes);
 	emetteurs_free(set.emetteurs);
+	types_antenne_free(set.types_antenne);
+	antennes_free(set.antennes);
 	exploitants_free(set.exploitants);
 	stations_free(set.stations);
 	proprietaires_free(set.proprietaires);
@@ -881,14 +884,14 @@ station_description(struct f_type_antenne *types_antenne, struct station *sta, c
 	struct emetteur *emr;
 	struct bande *ban;
 	struct antenne *aer;
-	int n, b;
+	int n, b, e;
 
 	/* summary */
-	strbuf_str(desc, "   implementation: ");
+	strbuf_str(desc, "    implementation: ");
 	strbuf_str(desc, sta->dte_implemntatation_str);
-	strbuf_str(desc, "\n   modification: ");
+	strbuf_str(desc, "\n    modification: ");
 	strbuf_str(desc, sta->dte_modif_str);
-	strbuf_str(desc, "\n   en service: ");
+	strbuf_str(desc, "\n    en service: ");
 	strbuf_str(desc, sta->dte_en_service_str);
 	strbuf_chr(desc, '\n');
 	strbuf_int(desc, sta->emetteur_count);
@@ -949,6 +952,21 @@ station_description(struct f_type_antenne *types_antenne, struct station *sta, c
 		strbuf_chr(desc, '+');
 		strbuf_str(desc, aer->aer_nb_alt_bas_str);
 		strbuf_chr(desc, '\n');
+		if (aer->emetteur_count > 0) {
+			emr = NULL;
+			strbuf_str(desc, "    ");
+			for (e=0; e<aer->emetteur_count; e++) {
+				if (emr) {
+					strbuf_chr(desc, ',');
+					strbuf_chr(desc, ' ');
+				}
+				emr = aer->emetteurs[e];
+				strbuf_str(desc, emr->emr_id_str);
+				strbuf_chr(desc, ' ');
+				strbuf_str(desc, emr->emr_lb_systeme);
+			}
+			strbuf_chr(desc, '\n');
+		}
 	}
 
 	return desc - desc_start;
@@ -1037,7 +1055,7 @@ exploitant_get_name(struct f_exploitant *f, int adm_id)
 }
 
 struct f_emetteur *
-emetteurs_load(char *path, struct f_station *stations)
+emetteurs_load(char *path, struct f_station *stations, struct f_antenne *antennes)
 {
 	struct f_emetteur *emetteurs;
 	struct csv *csv;
@@ -1045,6 +1063,7 @@ emetteurs_load(char *path, struct f_station *stations)
 	int emr_id, sys_id;
 	char *emr_id_str;
 	struct station *sta;
+	struct antenne *aer;
 
 	emetteurs = xmalloc_zero(sizeof(struct f_emetteur));
 	csv = &emetteurs->csv;
@@ -1096,6 +1115,16 @@ emetteurs_load(char *path, struct f_station *stations)
 		sta->emetteurs[sta->emetteur_count] = emr;
 		sta->emetteur_count++;
 		sta->systeme_count[sys_id]++;
+
+		/* link to antenne */
+		aer = antennes->table[emr->aer_id];
+		if (aer) {
+			if (aer->emetteur_count == ANTENNE_EMETTEUR_MAX)
+				errx(1, "maximum number of emetteurs %d reached for antenne %d", ANTENNE_EMETTEUR_MAX, aer->aer_id);
+			aer->emetteurs[aer->emetteur_count] = emr;
+			aer->emetteur_count++;
+		} else
+			warnx("incoherent data: emetteur %d refers to non-existing antenne %d", emr_id, emr->aer_id);
 
 		emetteurs->table[emr->emr_id] = emr;
 		emetteurs->count++;
@@ -1256,6 +1285,7 @@ antennes_load(char *path, struct f_station *stations)
 			csv_float(csv, &aer->aer_nb_azimut, &aer->aer_nb_azimut_str);
 			csv_float(csv, &aer->aer_nb_alt_bas, &aer->aer_nb_alt_bas_str);
 			csv_int(csv, NULL, &aer->sup_id_str);
+			aer->emetteur_count = 0;
 		}
 
 		/* update related station counters */
@@ -1506,7 +1536,7 @@ csv_open(struct csv *csv, char *path, int conv)
 	char *ptr;
 
 	if (stat(path, &fstat) == -1)
-		errx(1, "could not stat csv: %s", path);
+		errx(1, "could not find csv: %s", path);
 	f = open(path, O_RDONLY);
 	if (!f)
 		errx(1, "could not open csv: %s", path);
@@ -1792,18 +1822,6 @@ tm_diff(struct tm *a, struct tm *b)
 {
 	int diff = 0;
 
-	/* XXX if (a->tm_year < b->tm_year)
-		return -1;
-	if (a->tm_year > b->tm_year)
-		return 1;
-	if (a->tm_mon < b->tm_mon)
-		return -1;
-	if (a->tm_mon > b->tm_mon)
-		return 1;
-	if (a->tm_mday < b->tm_mday)
-		return -1;
-	if (a->tm_mday > b->tm_mday)
-		return 1; */
 	diff += (a->tm_year - b->tm_year) * 365;
 	diff += (a->tm_mon - b->tm_mon) * 30;
 	diff += a->tm_mday - b->tm_mday;
