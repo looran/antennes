@@ -19,6 +19,8 @@ Additionally in [`split/`](https://ferme.ydns.eu/antennes/split/) you can find t
 ![example usage: antennes KML file imported in Google Earth](doc/antennes_googleearth.png)<br/>
 _example usage: antennes KML file imported in Google Earth_
 
+NOTE: Some mapping software do not support large numbers of placemarks. Consider displaying only a single _Document_ within the KML files, or load smaller [splitted KML files](https://ferme.ydns.eu/antennes/split/).
+
 # Usage
 
 ```
