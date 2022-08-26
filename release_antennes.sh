@@ -12,7 +12,8 @@ do_release() {
 	period="$(basename $extract_dir)"
 	latest_period="$(ls $ANT_DIR/extract/ |tail -n1)"
 	period_split_zip=anfr_${period}_kml_split.zip
-	period_kml=anfr_${period}.kml
+	period_kml_prop=anfr_${period}_proprietaires.kml
+	period_kml_dept=anfr_${period}_departements.kml
 	period_stats=anfr_${period}_stats.txt
 	period_proprietaire=anfr_${period}_proprietaire
 	period_departement=anfr_${period}_departement
@@ -29,7 +30,8 @@ do_release() {
 
 	echo [+] renaming output files to prepend the period name
 	trace mkdir $TMP_DIR/release
-	trace cp $TMP_DIR/output/anfr.kml $TMP_DIR/release/$period_kml
+	trace cp $TMP_DIR/output/anfr_proprietaires.kml $TMP_DIR/release/$period_kml_prop
+	trace cp $TMP_DIR/output/anfr_departements.kml $TMP_DIR/release/$period_kml_dept
 	trace cp $TMP_DIR/output/stats.txt $TMP_DIR/release/$period_stats
 	trace mkdir $TMP_DIR/release/$period_proprietaire
 	for f in $TMP_DIR/output/anfr_proprietaire/*; do
@@ -51,13 +53,15 @@ do_release() {
 	trace scp -r $TMP_DIR/release/anfr_${period}_proprietaire $host:$host_dir/split
 	trace scp -r $TMP_DIR/release/anfr_${period}_departement $host:$host_dir/split
 	trace scp $TMP_DIR/release/$period_split_zip $host:$host_dir/split
-	trace scp $TMP_DIR/release/$period_kml $host:$host_dir
+	trace scp $TMP_DIR/release/$period_kml_prop $host:$host_dir
+	trace scp $TMP_DIR/release/$period_kml_dept $host:$host_dir
 
 	if [ $latest_period = $period ]; then
 		echo [+] link release files as latest
 		latest_prefix=anfr_0000-latest
 		#trace ssh $host "rm -f $host_dir/${latest_prefix}_kmls.zip && ln -s $period_split_zip \$(realpath $host_dir/${latest_prefix}_kmls.zip)"
-		trace ssh $host "rm -f $host_dir/${latest_prefix}.kml && ln -s $period_kml $host_dir/${latest_prefix}.kml"
+		trace ssh $host "rm -f $host_dir/${latest_prefix}_proprietaires.kml && ln -s $period_kml_prop $host_dir/${latest_prefix}_proprietaires.kml"
+		trace ssh $host "rm -f $host_dir/${latest_prefix}_departements.kml && ln -s $period_kml_dept $host_dir/${latest_prefix}_departements.kml"
 		trace ssh $host "rm -f $host_dir/${latest_prefix}_stats.txt && ln -s $period_stats $host_dir/${latest_prefix}_stats.txt"
 		trace ssh $host "rm -f $host_dir/split/${latest_prefix}_proprietaire && ln -s $period_proprietaire $host_dir/split/${latest_prefix}_proprietaire"
 		trace ssh $host "rm -f $host_dir/split/${latest_prefix}_departement && ln -s $period_departement $host_dir/split/${latest_prefix}_departement"
