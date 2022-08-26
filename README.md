@@ -1,17 +1,20 @@
 ## antennes - Query and export KML files from ANFR radio sites data
 
-features:
-* generates KML files of emetteurs sites for all France and per-departement and per-proprietaire of the _support_
-* each KML placemark for a _support_ contain informations about _stations_, _emetteurs_ and _antennes_ present on the site
-* each KML placemark is colored in orange if it has been modified in the last 3 month and red if in the last month
+Features:
+* Generates KML file of all emetteurs sites based on ANFR monthly data
+* Opens in many PC / Mobile mapping software
+* Each placemark contains all informations about _support_, _stations_, _emetteurs_ and _antennes_ on the site
+* Each placemark is colored in red or orange if it has received modifications in the last 1 or 3 months
 
-You can download pre-generated KML files [here](https://ferme.ydns.eu/antennes/), with 2 files per month period:
-* `anfr_YYYY-MM.kml` [~200MB] all-in-one KML file for the period with all _supports_
+You can download [pre-generated KML files here](https://ferme.ydns.eu/antennes/), with 2 files per month period:
+* `anfr_YYYY-MM.kml` [~200MB]
+all-in-one KML file for the period with all _supports_
 * `anfr_YYYY-MM_stats.txt` [~2KB] statistics for the period
-Additionally in `split/` you can find for each period:
-* `split/anfr_YYYY-MM_departement/anfr_YYYY-MM_departement_<dept-id>.kml` [<30MB] a KML file with _supports_ for a single _departement_
-* `split/anfr_YYYY-MM_proprietaire/anfr_YYYY-MM_proprietaire_<prop-id>_<prop-name>.kml` [<10MB] a KML file with _supports_ owned by a single _proprietaire_
-* `split/anfr_YYYY-MM_kml_split.zip` [~60MB] archive containing all split kml files
+
+Additionally in [`split/`](https://ferme.ydns.eu/antennes/split/) you can find the splited KML files for each period:
+* `split/anfr_YYYY-MM_departement/anfr_YYYY-MM_departement_<dept-id>.kml` [<10MB]
+* `split/anfr_YYYY-MM_proprietaire/anfr_YYYY-MM_proprietaire_<prop-id>_<prop-name>.kml` [<30MB]
+* `split/anfr_YYYY-MM_kml_split.zip` [~60MB] archive containing all split kml files for the period
 
 ![example usage: antennes KML file imported in Google Earth](doc/antennes_googleearth.png)<br/>
 _example usage: antennes KML file imported in Google Earth_
