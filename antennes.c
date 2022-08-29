@@ -39,6 +39,7 @@ static struct conf {
 	char now_str[64];
 	int no_color;
 	int verbose;
+	int warn_incoherent_data;
 } conf;
 
 #define CSV_NORMAL 0
@@ -442,6 +443,10 @@ void		 utf8_to_iso8859(char *);
 		fprintf(stderr, __VA_ARGS__); \
 } while (0)
 #define info(...) do { fprintf(stderr, __VA_ARGS__); } while (0)
+#define warn_incoherent_data(...) do { \
+	conf.warn_incoherent_data += 1; \
+	warnx(__VA_ARGS__); \
+} while (0)
 
 __attribute__((__noreturn__)) void
 usageexit()
@@ -543,6 +548,9 @@ main(int argc, char *argv[])
 	supports_free(set.supports);
 	natures_free(set.natures);
 #endif
+
+	if (conf.warn_incoherent_data > 0)
+		printf("incoherent data warnings: %d\n", conf.warn_incoherent_data);
 
 	return 0;
 }
@@ -691,7 +699,7 @@ proprietaires_load(char *path)
 		if (tpo_id >= PROPRIETAIRE_ID_MAX)
 			errx(1, "line %d: invalid proprietaire id %d too big", csv->line_count, tpo_id);
 		if (proprietaires->table[tpo_id]) {
-			warnx("incoherent data: line %d: proprietaire %d already exists, ignoring\n", csv->line_count, tpo_id);
+			warn_incoherent_data("line %d: proprietaire %d already exists, ignoring\n", csv->line_count, tpo_id);
 			continue;
 		}
 		proprio = malloc(sizeof(struct proprio));
@@ -787,7 +795,7 @@ stations_load(char *path)
 		}
 		zone = dept->zones[sta->sta_nm.zone];
 		if (zone->stations[sta->sta_nm.id]) {
-			warnx("incoherent data: line %d: station %s already exists, ignoring", csv->line_count, sta->sta_nm.str);
+			warn_incoherent_data("line %d: station %s already exists, ignoring", csv->line_count, sta->sta_nm.str);
 			free(sta);
 			continue;
 		}
@@ -856,7 +864,7 @@ station_get_next(struct f_station *stations, struct sta_nm *table, int count, st
 	for (n=0; n<count; n++) {
 		sta = station_get(stations, &table[n]);
 		if (!sta) {
-			warnx("incoherent data: station %s not found, ignoring", table[n].str);
+			warn_incoherent_data("station %s not found, ignoring", table[n].str);
 			continue;
 		}
 		tmdiff1_last = 0;
@@ -1024,7 +1032,7 @@ exploitants_load(char *path)
 		if (adm_id >= EXPLOITANT_ID_MAX)
 			errx(1, "invalid exploitant id, too big (%d) at line %d", adm_id, csv->line_count);
 		if (exploitants->table[adm_id]) {
-			warnx("incoherent data: line %d: exploitant %d already exists, ignoring\n", csv->line_count, adm_id);
+			warn_incoherent_data("line %d: exploitant %d already exists, ignoring\n", csv->line_count, adm_id);
 			continue;
 		}
 
@@ -1084,7 +1092,7 @@ emetteurs_load(char *path, struct f_station *stations, struct f_antenne *antenne
 		if (emr_id >= EMETTEUR_ID_MAX)
 			errx(1, "emetteur id too big: %d", emr_id);
 		if (emetteurs->table[emr_id]) {
-			warnx("incoherent data: line %d: emetteur %d already exists, ignoring", csv->line_count, emr_id);
+			warn_incoherent_data("line %d: emetteur %d already exists, ignoring", csv->line_count, emr_id);
 			continue;
 		}
 
@@ -1114,7 +1122,7 @@ emetteurs_load(char *path, struct f_station *stations, struct f_antenne *antenne
 		/* update related station */
 		sta = station_get(stations, &emr->sta_nm);
 		if (!sta) {
-			warnx("incoherent data: station %s not found for emetteur %d, ignoring", emr->sta_nm.str, emr_id);
+			warn_incoherent_data("station %s not found for emetteur %d, ignoring", emr->sta_nm.str, emr_id);
 			free(emr);
 			continue;
 		}
@@ -1132,7 +1140,7 @@ emetteurs_load(char *path, struct f_station *stations, struct f_antenne *antenne
 			aer->emetteurs[aer->emetteur_count] = emr;
 			aer->emetteur_count++;
 		} else
-			warnx("incoherent data: emetteur %d refers to non-existing antenne %d", emr_id, emr->aer_id);
+			warn_incoherent_data("emetteur %d refers to non-existing antenne %d", emr_id, emr->aer_id);
 
 		emetteurs->table[emr->emr_id] = emr;
 		emetteurs->count++;
@@ -1228,7 +1236,7 @@ bandes_load(char *path, struct f_emetteur *emetteurs)
 
 		emr = emetteur_get(emetteurs, ban->emr_id);
 		if (!emr) {
-			warnx("incoherent data: emetteur %d not found for bande %d, ignoring", ban->emr_id, ban_id);
+			warn_incoherent_data("emetteur %d not found for bande %d, ignoring", ban->emr_id, ban_id);
 			free(ban);
 			continue;
 		}
@@ -1299,7 +1307,7 @@ antennes_load(char *path, struct f_station *stations)
 		/* update related station counters */
 		sta = station_get(stations, &sta_nm);
 		if (!sta) {
-			warnx("incoherent data: station %s not found for antenne %d, ignoring", sta_nm.str, aer_id);
+			warn_incoherent_data("station %s not found for antenne %d, ignoring", sta_nm.str, aer_id);
 			if (!antennes->table[aer_id])
 				free(aer); /* free only if it is new antenne, not attached to other stations */
 			continue;
@@ -1479,7 +1487,7 @@ output_kml(struct anfr_set *set, const char *output_dir, const char *source_name
 		for (n=0; n<sup->sta_count; n++) {
 			sta = station_get_next(set->stations, sup->sta_nm_anfr, sup->sta_count, sta);
 			if (!sta) {
-				warnx("incoherent data: missing stations for support %d, ignoring", sup->sup_id);
+				warn_incoherent_data("missing stations for support %d, ignoring", sup->sup_id);
 				continue;
 			}
 			exploitant_name = exploitant_get_name(set->exploitants, sta->adm_id);
