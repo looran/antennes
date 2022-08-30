@@ -1437,7 +1437,7 @@ output_kml(struct anfr_set *set, const char *output_dir, const char *source_name
 	char path[PATH_MAX], buf[1024], buf2[128], expllist[4096];
 	struct kml *kmls_tpo[PROPRIETAIRE_ID_MAX];
 	struct kml *kmls_dept[SUPPORT_CP_DEPT_MAX];
-	struct kml *ka_tpo, *ka_dept, *k_tpo, *k_dept;
+	struct kml *ka_tpo, *ka_dept, *ka_dept_light, *k_tpo, *k_dept;
 	const char *tpo_name, *exploitant_name;
 	struct stat fstat;
 	struct station *sta;
@@ -1461,7 +1461,10 @@ output_kml(struct anfr_set *set, const char *output_dir, const char *source_name
 	snprintf(path, sizeof(path), "%s/anfr_departements.kml", output_dir);
 	snprintf(buf, sizeof(buf), "%s per departement", source_name);
 	ka_dept = kml_open(path, buf);
-	kml_count = 2;
+	snprintf(path, sizeof(path), "%s/anfr_departements_light.kml", output_dir);
+	snprintf(buf, sizeof(buf), "%s per departement (light)", source_name);
+	ka_dept_light = kml_open(path, buf);
+	kml_count = 3;
 
 	/* iterate over supports and append to aggregated and per-proprietaire kml files */
 	for (idx=0, sup_count=0;
@@ -1558,6 +1561,7 @@ output_kml(struct anfr_set *set, const char *output_dir, const char *source_name
 		kml_add_placemark_point(ka_tpo,   sup->tpo_id, tpo_name, sup->sup_id, buf, desc, sup->lat, sup->lon, (float)sup->sup_nm_haut, KML_STYLES[style], ts_begin);
 		kml_add_placemark_point(k_dept, sup->tpo_id, tpo_name, sup->sup_id, buf, desc, sup->lat, sup->lon, (float)sup->sup_nm_haut, KML_STYLES[style], ts_begin);
 		kml_add_placemark_point(ka_dept, sup->dept, sup->dept_name, sup->sup_id, buf, desc, sup->lat, sup->lon, (float)sup->sup_nm_haut, KML_STYLES[style], ts_begin);
+		kml_add_placemark_point(ka_dept_light, sup->dept, sup->dept_name, sup->sup_id, "", "", sup->lat, sup->lon, (float)sup->sup_nm_haut, KML_STYLES[style], ts_begin);
 	}
 
 	/* close all kml files */
@@ -1573,6 +1577,7 @@ output_kml(struct anfr_set *set, const char *output_dir, const char *source_name
 	}
 	kml_close(ka_tpo);
 	kml_close(ka_dept);
+	kml_close(ka_dept_light);
 
 	info("created %d kml files\n", kml_count);
 }
@@ -1797,7 +1802,10 @@ kml_add_placemark_point(struct kml *kml, int doc_id, const char *doc_name, int i
 	if (styleurl) {
 		snprintf(buf2, sizeof(buf2), KML_PLACEMARK_POINT_STYLE, styleurl);
 	}
-	strftime(tsbuf, sizeof(tsbuf), "%Y-%m-%d", ts_begin);
+	if (ts_begin)
+		strftime(tsbuf, sizeof(tsbuf), "%Y-%m-%d", ts_begin);
+	else
+		tsbuf[0] = '\0';
 	len = snprintf(buf, sizeof(buf), KML_PLACEMARK_POINT, id, name, description, buf2, id, tsbuf, lon, lat, haut);
 	if (len >= sizeof(buf))
 		errx(1, "kml_add_placemark_point internal buffer limit reached (%d)", len);

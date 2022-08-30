@@ -14,6 +14,7 @@ do_release() {
 	period_split_zip=anfr_${period}_kml_split.zip
 	period_kml_prop=anfr_${period}_proprietaires.kml
 	period_kml_dept=anfr_${period}_departements.kml
+	period_kml_dept_light=anfr_${period}_departements_light.kml
 	period_stats=anfr_${period}_stats.txt
 	period_proprietaire=anfr_${period}_proprietaire
 	period_departement=anfr_${period}_departement
@@ -32,6 +33,7 @@ do_release() {
 	trace mkdir $TMP_DIR/release
 	trace cp $TMP_DIR/output/anfr_proprietaires.kml $TMP_DIR/release/$period_kml_prop
 	trace cp $TMP_DIR/output/anfr_departements.kml $TMP_DIR/release/$period_kml_dept
+	trace cp $TMP_DIR/output/anfr_departements_light.kml $TMP_DIR/release/$period_kml_dept_light
 	trace cp $TMP_DIR/output/stats.txt $TMP_DIR/release/$period_stats
 	trace mkdir $TMP_DIR/release/$period_proprietaire
 	for f in $TMP_DIR/output/anfr_proprietaire/*; do
@@ -55,6 +57,7 @@ do_release() {
 	trace scp $TMP_DIR/release/$period_split_zip $host:$host_dir/split
 	trace scp $TMP_DIR/release/$period_kml_prop $host:$host_dir
 	trace scp $TMP_DIR/release/$period_kml_dept $host:$host_dir
+	trace scp $TMP_DIR/release/$period_kml_dept_light $host:$host_dir
 
 	if [ $latest_period = $period ]; then
 		echo [+] link release files as latest
@@ -62,6 +65,7 @@ do_release() {
 		#trace ssh $host "rm -f $host_dir/${latest_prefix}_kmls.zip && ln -s $period_split_zip \$(realpath $host_dir/${latest_prefix}_kmls.zip)"
 		trace ssh $host "rm -f $host_dir/${latest_prefix}_proprietaires.kml && ln -s $period_kml_prop $host_dir/${latest_prefix}_proprietaires.kml"
 		trace ssh $host "rm -f $host_dir/${latest_prefix}_departements.kml && ln -s $period_kml_dept $host_dir/${latest_prefix}_departements.kml"
+		trace ssh $host "rm -f $host_dir/${latest_prefix}_departements_light.kml && ln -s $period_kml_dept_light $host_dir/${latest_prefix}_departements_light.kml"
 		trace ssh $host "rm -f $host_dir/${latest_prefix}_stats.txt && ln -s $period_stats $host_dir/${latest_prefix}_stats.txt"
 		trace ssh $host "rm -f $host_dir/split/${latest_prefix}_proprietaire && ln -s $period_proprietaire $host_dir/split/${latest_prefix}_proprietaire"
 		trace ssh $host "rm -f $host_dir/split/${latest_prefix}_departement && ln -s $period_departement $host_dir/split/${latest_prefix}_departement"
@@ -84,6 +88,7 @@ done 3< <(ls -r1d $ANT_DIR/extract/* |head -n$periods_count)
 cat > $TMP_DIR/README.txt <<-_EOF
 KML exports and statistics on french antennas based on ANFR data from 2015 to now
 * anfr_YYYY-MM_departements.kml [~200MB] KML file containing all _supports_ organised by department
+* anfr_YYYY-MM_departements_light.kml [~30MB] KML file containing all _supports_ organised by departement and with no description
 * anfr_YYYY-MM_proprietaires.kml [~200MB] KML file containing all _supports_ organised by proprietaire
 * anfr_YYYY-MM_stats.txt [~2KB] statistics for the period
 Additionally in split/ you can find the splited KML files for each period:
