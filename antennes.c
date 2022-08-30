@@ -94,6 +94,9 @@ const char *KML_STYLES[] = {
 	"\t\t\t<name>%s</name>\n" \
 	"\t\t\t<description><![CDATA[%s]]></description>\n" \
 	"%s" \
+	"\t\t\t<TimeSpan id=\"ts%d\">\n" \
+	"\t\t\t  <begin>%s</begin>\n" \
+	"\t\t\t</TimeSpan>\n" \
 	"\t\t\t<Point>\n" \
 	"\t\t\t\t<altitudeMode>relativeToGround</altitudeMode>\n" \
 	"\t\t\t\t<coordinates>%f,%f,%f</coordinates>\n" \
@@ -420,7 +423,7 @@ void		 csv_date(struct csv *, struct tm *, char **);
 /* kml */
 struct kml	*kml_open(const char *, const char *);
 void		 kml_close(struct kml *);
-void		 kml_add_placemark_point(struct kml *, int, const char *, int, char *, char *, float, float, float, const char *);
+void		 kml_add_placemark_point(struct kml *, int, const char *, int, char *, char *, float, float, float, const char *, const struct tm *);
 /* utils */
 void		 coord_dms_to_dd(int [3], char *, int [3], char *, float *, float *);
 const char *pathable(const char *);
@@ -796,6 +799,7 @@ stations_load(char *path)
 				dte_latest = &sta->dte_en_service;
 		}
 		memcpy(&sta->dte_latest, dte_latest, sizeof(struct tm));
+
 		/* update latest station date, except if date is more recent than now (incoherent data) */
 		if (tm_diff(&conf.now, dte_latest) > 0 && tm_diff(dte_latest, &stations->latest) > 0)
 			memcpy(&stations->latest, dte_latest, sizeof(struct tm));
@@ -1437,6 +1441,7 @@ output_kml(struct anfr_set *set, const char *output_dir, const char *source_name
 	const char *tpo_name, *exploitant_name;
 	struct stat fstat;
 	struct station *sta;
+	struct tm *ts_begin;
 
 	if (stat(output_dir, &fstat) == -1)
 		mkdir(output_dir, 0755);
@@ -1502,6 +1507,7 @@ output_kml(struct anfr_set *set, const char *output_dir, const char *source_name
 		else
 			style = KML_STYLE_1_BLUE;
 		sta = NULL;
+		ts_begin = NULL;
 		for (n=0; n<sup->sta_count; n++) {
 			sta = station_get_next(set->stations, sup->sta_nm_anfr, sup->sta_count, sta);
 			if (!sta) {
@@ -1534,6 +1540,9 @@ output_kml(struct anfr_set *set, const char *output_dir, const char *source_name
 						style = KML_STYLE_2_ORANGE;
 				}
 			}
+			/* update support timespan begin */
+			if (!ts_begin || tm_diff(&sta->dte_implemntatation, ts_begin) < 0)
+				ts_begin = &sta->dte_implemntatation;
 		}
 		memcpy(desc+len_desc, stalist, len_stalist+1);
 		len_desc += len_stalist;
@@ -1545,10 +1554,10 @@ output_kml(struct anfr_set *set, const char *output_dir, const char *source_name
 			snprintf(buf2, sizeof(buf2), "[%d] ", sup->sta_count);
 		snprintf(buf, sizeof(buf), "%s%s", buf2, expllist);
 		/* append placemark to kmls */
-		kml_add_placemark_point(k_tpo,  sup->tpo_id, tpo_name, sup->sup_id, buf, desc, sup->lat, sup->lon, (float)sup->sup_nm_haut, KML_STYLES[style]);
-		kml_add_placemark_point(ka_tpo,   sup->tpo_id, tpo_name, sup->sup_id, buf, desc, sup->lat, sup->lon, (float)sup->sup_nm_haut, KML_STYLES[style]);
-		kml_add_placemark_point(k_dept, sup->tpo_id, tpo_name, sup->sup_id, buf, desc, sup->lat, sup->lon, (float)sup->sup_nm_haut, KML_STYLES[style]);
-		kml_add_placemark_point(ka_dept, sup->dept, sup->dept_name, sup->sup_id, buf, desc, sup->lat, sup->lon, (float)sup->sup_nm_haut, KML_STYLES[style]);
+		kml_add_placemark_point(k_tpo,  sup->tpo_id, tpo_name, sup->sup_id, buf, desc, sup->lat, sup->lon, (float)sup->sup_nm_haut, KML_STYLES[style], ts_begin);
+		kml_add_placemark_point(ka_tpo,   sup->tpo_id, tpo_name, sup->sup_id, buf, desc, sup->lat, sup->lon, (float)sup->sup_nm_haut, KML_STYLES[style], ts_begin);
+		kml_add_placemark_point(k_dept, sup->tpo_id, tpo_name, sup->sup_id, buf, desc, sup->lat, sup->lon, (float)sup->sup_nm_haut, KML_STYLES[style], ts_begin);
+		kml_add_placemark_point(ka_dept, sup->dept, sup->dept_name, sup->sup_id, buf, desc, sup->lat, sup->lon, (float)sup->sup_nm_haut, KML_STYLES[style], ts_begin);
 	}
 
 	/* close all kml files */
@@ -1758,12 +1767,13 @@ kml_close(struct kml *kml)
 }
 
 void
-kml_add_placemark_point(struct kml *kml, int doc_id, const char *doc_name, int id, char *name, char *description, float lat, float lon, float haut, const char *styleurl)
+kml_add_placemark_point(struct kml *kml, int doc_id, const char *doc_name, int id, char *name, char *description, float lat, float lon, float haut, const char *styleurl, const struct tm *ts_begin)
 {
 	char buf[SUPPORT_DESCRIPTION_BUF_SIZE];
 	char buf2[256];
 	int len, idx;
 	struct kml_doc *doc;
+	char tsbuf[50];
 
 	/* get the document matching doc_id */
 	doc = NULL;
@@ -1787,7 +1797,8 @@ kml_add_placemark_point(struct kml *kml, int doc_id, const char *doc_name, int i
 	if (styleurl) {
 		snprintf(buf2, sizeof(buf2), KML_PLACEMARK_POINT_STYLE, styleurl);
 	}
-	len = snprintf(buf, sizeof(buf), KML_PLACEMARK_POINT, id, name, description, buf2, lon, lat, haut);
+	strftime(tsbuf, sizeof(tsbuf), "%Y-%m-%d", ts_begin);
+	len = snprintf(buf, sizeof(buf), KML_PLACEMARK_POINT, id, name, description, buf2, id, tsbuf, lon, lat, haut);
 	if (len >= sizeof(buf))
 		errx(1, "kml_add_placemark_point internal buffer limit reached (%d)", len);
 	doc->placemarks = realloc(doc->placemarks, doc->placemarks_size + len);
