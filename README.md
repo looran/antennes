@@ -8,6 +8,7 @@ Features:
 
 You can download [pre-generated KML files here](https://ferme.ydns.eu/antennes/), with 2 files per month period:
 * `anfr_YYYY-MM_departements.kml` [~200MB] KML file containing all _supports_ organised by department
+* `anfr_YYYY-MM_departements_light.kml` [~30MB] KML file containing all _supports_ with no description
 * `anfr_YYYY-MM_proprietaires.kml` [~200MB] KML file containing all _supports_ organised by proprietaire
 * `anfr_YYYY-MM_stats.txt` [~2KB] statistics for the period
 
