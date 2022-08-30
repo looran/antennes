@@ -372,6 +372,8 @@ struct anfr_set {
 
 __attribute__((__noreturn__)) void usageexit(void);
 /* input file processing */
+struct anfr_set		*set_load(char *);
+void				 set_free(struct anfr_set *);
 struct f_nature		*natures_load(char *);
 void				 natures_free(struct f_nature *);
 const char			*nature_get_name(struct f_nature *, int);
@@ -445,7 +447,7 @@ void		 utf8_to_iso8859(char *);
 #define info(...) do { fprintf(stderr, __VA_ARGS__); } while (0)
 #define warn_incoherent_data(...) do { \
 	conf.warn_incoherent_data += 1; \
-	warnx(__VA_ARGS__); \
+	warnx("incoherent data: " __VA_ARGS__); \
 } while (0)
 
 __attribute__((__noreturn__)) void
@@ -470,8 +472,7 @@ usageexit()
 int
 main(int argc, char *argv[])
 {
-	struct anfr_set set;
-	char dir[PATH_MAX];
+	struct anfr_set *set;
 	int ch, stats = 0;
 	char *kml_export = NULL;
 	time_t now;
@@ -507,52 +508,69 @@ main(int argc, char *argv[])
 	info("[+] loading files from %s\n", argv[0]);
 	if (stats)
 		printf("file name : %s\n\n", basename(argv[0]));
-	snprintf(dir, sizeof(dir), "%s/SUP_NATURE.txt", argv[0]);
-	set.natures = natures_load(dir);
-	snprintf(dir, sizeof(dir), "%s/SUP_SUPPORT.txt", argv[0]);
-	set.supports = supports_load(dir);
-	snprintf(dir, sizeof(dir), "%s/SUP_PROPRIETAIRE.txt", argv[0]);
-	set.proprietaires = proprietaires_load(dir);
-	snprintf(dir, sizeof(dir), "%s/SUP_STATION.txt", argv[0]);
-	set.stations = stations_load(dir);
-	snprintf(dir, sizeof(dir), "%s/SUP_EXPLOITANT.txt", argv[0]);
-	set.exploitants = exploitants_load(dir);
-	snprintf(dir, sizeof(dir), "%s/SUP_ANTENNE.txt", argv[0]);
-	set.antennes = antennes_load(dir, set.stations);
-	snprintf(dir, sizeof(dir), "%s/SUP_TYPE_ANTENNE.txt", argv[0]);
-	set.types_antenne = types_antenne_load(dir);
-	snprintf(dir, sizeof(dir), "%s/SUP_EMETTEUR.txt", argv[0]);
-	set.emetteurs = emetteurs_load(dir, set.stations, set.antennes);
-	snprintf(dir, sizeof(dir), "%s/SUP_BANDE.txt", argv[0]);
-	set.bandes = bandes_load(dir, set.emetteurs);
+	set = set_load(argv[0]);
 
 	if (stats) {
 		info("[*] displaying statistics\n");
-		printf("\nemetteurs systemes count:\n%s", emetteurs_stats(set.emetteurs));
+		printf("\nemetteurs systemes count:\n%s", emetteurs_stats(set->emetteurs));
 	}
 
 	if (kml_export) {
 		info("[*] exporting kml to %s\n", kml_export);
-		output_kml(&set, kml_export, basename(argv[0]));
+		output_kml(set, kml_export, basename(argv[0]));
 	}
 
 #ifdef DEBUG
 	info("[*] freeing ressources\n");
-	bandes_free(set.bandes);
-	emetteurs_free(set.emetteurs);
-	types_antenne_free(set.types_antenne);
-	antennes_free(set.antennes);
-	exploitants_free(set.exploitants);
-	stations_free(set.stations);
-	proprietaires_free(set.proprietaires);
-	supports_free(set.supports);
-	natures_free(set.natures);
+	set_free(set);
 #endif
 
 	if (conf.warn_incoherent_data > 0)
 		printf("incoherent data warnings: %d\n", conf.warn_incoherent_data);
 
 	return 0;
+}
+
+struct anfr_set *
+set_load(char *path)
+{
+	struct anfr_set *set = xmalloc_zero(sizeof(struct anfr_set));
+	char dir[PATH_MAX];
+
+	snprintf(dir, sizeof(dir), "%s/SUP_NATURE.txt", path);
+	set->natures = natures_load(dir);
+	snprintf(dir, sizeof(dir), "%s/SUP_SUPPORT.txt", path);
+	set->supports = supports_load(dir);
+	snprintf(dir, sizeof(dir), "%s/SUP_PROPRIETAIRE.txt", path);
+	set->proprietaires = proprietaires_load(dir);
+	snprintf(dir, sizeof(dir), "%s/SUP_STATION.txt", path);
+	set->stations = stations_load(dir);
+	snprintf(dir, sizeof(dir), "%s/SUP_EXPLOITANT.txt", path);
+	set->exploitants = exploitants_load(dir);
+	snprintf(dir, sizeof(dir), "%s/SUP_ANTENNE.txt", path);
+	set->antennes = antennes_load(dir, set->stations);
+	snprintf(dir, sizeof(dir), "%s/SUP_TYPE_ANTENNE.txt", path);
+	set->types_antenne = types_antenne_load(dir);
+	snprintf(dir, sizeof(dir), "%s/SUP_EMETTEUR.txt", path);
+	set->emetteurs = emetteurs_load(dir, set->stations, set->antennes);
+	snprintf(dir, sizeof(dir), "%s/SUP_BANDE.txt", path);
+	set->bandes = bandes_load(dir, set->emetteurs);
+
+	return set;
+}
+
+void
+set_free(struct anfr_set *set)
+{
+	bandes_free(set->bandes);
+	emetteurs_free(set->emetteurs);
+	types_antenne_free(set->types_antenne);
+	antennes_free(set->antennes);
+	exploitants_free(set->exploitants);
+	stations_free(set->stations);
+	proprietaires_free(set->proprietaires);
+	supports_free(set->supports);
+	natures_free(set->natures);
 }
 
 struct f_nature *
