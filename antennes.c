@@ -1799,13 +1799,12 @@ kml_add_placemark_point(struct kml *kml, int doc_id, const char *doc_name, int i
 	}
 
 	/* append to placemarks in this document */
-	if (styleurl) {
-		snprintf(buf2, sizeof(buf2), KML_PLACEMARK_POINT_STYLE, styleurl);
-	}
 	if (ts_begin)
 		strftime(tsbuf, sizeof(tsbuf), "%Y-%m-%d", ts_begin);
 	else
 		tsbuf[0] = '\0';
+	if (styleurl)
+		snprintf(buf2, sizeof(buf2), KML_PLACEMARK_POINT_STYLE, styleurl);
 	len = snprintf(buf, sizeof(buf), KML_PLACEMARK_POINT, id, name, description, buf2, id, tsbuf, lon, lat, haut);
 	if (len >= sizeof(buf))
 		errx(1, "kml_add_placemark_point internal buffer limit reached (%d)", len);
