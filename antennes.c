@@ -869,8 +869,10 @@ station_get(struct f_station *stations, struct sta_nm *nm)
 {
 	if (!stations->depts[nm->dept])
 		errx(1, "station_get: departement %x not found for station %s", nm->dept, nm->str);
-	if (!stations->depts[nm->dept]->zones[nm->zone])
-		errx(1, "station_get: zone %d not found in departement %x for station %s", nm->zone, nm->dept, nm->str);
+	if (!stations->depts[nm->dept]->zones[nm->zone]) {
+		warn_incoherent_data("zone %d not found in departement %x when looking for station %s", nm->zone, nm->dept, nm->str);
+		return NULL;
+	}
 	return stations->depts[nm->dept]->zones[nm->zone]->stations[nm->id];
 }
 
