@@ -115,7 +115,7 @@ const char *KML_STYLES[] = {
 
 struct kml_doc {
 	int id;
-	const char *name;
+	char *name;
 	char *placemarks;
 	int placemarks_size;
 	int placemarks_count;
@@ -436,6 +436,7 @@ uint64_t	 atoi16_fast(const char *);
 char		*itoa_u32(uint32_t, char *);
 char		*itoa_i32(int32_t, char *);
 void		 utf8_to_iso8859(char *);
+void		 strreplace(char *, int, char, char);
 #define strbuf_chr(buf, chr) do { \
 	buf[0] = chr; \
 	buf[1] = '\0'; \
@@ -464,9 +465,12 @@ usageexit()
 	printf("-v       verbose logging\n");
 	printf("if neither -s or -k are specified, this program only loads the data.\n");
 	printf("output kml files hierarchy:\n");
-	printf("   anfr.kml : all supports in a single file, one document section per proprietaire\n");
+	printf("   anfr_proprietaires.kml : all supports in a single file, one section per proprietaire\n");
+	printf("   anfr_departements.kml : all supports in a single file, one section per departement\n");
+	printf("   anfr_departements_light.kml : all supports in a single file, one section per departement, no description\n");
 	printf("   anfr_proprietaire/anfr_proprietaire_<proprietaire-id>_<proprietaire-name>.kml : one file per proprietaire\n");
 	printf("   anfr_departement/anfr_departement_<dept-id>.kml : one file per departement\n");
+	printf("   anfr_systeme/anfr_systeme_<sys-name>.kml : one file per systeme, one section per departement\n");
 	printf("kml placemark colors:\n");
 	printf("   orange for supports with stations updated in less than 3 months, red for 1 month, blue otherwise\n");
 	exit(1);
@@ -1433,16 +1437,19 @@ type_antenne_get(struct f_type_antenne *types, int tae_id)
 void
 output_kml(struct anfr_set *set, const char *output_dir, const char *source_name)
 {
-	int idx, sup_count, n, len_stalist, len_desc, kml_count, style, diff;
+	int idx, sup_count, n, e, len_stalist, len_desc, kml_count, style, diff;
+	int sup_systeme_ids[SYSTEMES_ID_MAX];
 	struct support *sup;
 	char desc[SUPPORT_DESCRIPTION_BUF_SIZE], stalist[SUPPORT_DESCRIPTION_BUF_SIZE];
 	char path[PATH_MAX], buf[1024], buf2[128], expllist[4096];
 	struct kml *kmls_tpo[PROPRIETAIRE_ID_MAX];
 	struct kml *kmls_dept[SUPPORT_CP_DEPT_MAX];
-	struct kml *ka_tpo, *ka_dept, *ka_dept_light, *k_tpo, *k_dept;
+	struct kml *kmls_sys[SYSTEMES_ID_MAX];
+	struct kml *ka_tpo, *ka_dept, *ka_dept_light, *k_tpo, *k_dept, *k_sys;
 	const char *tpo_name, *exploitant_name;
 	struct stat fstat;
 	struct station *sta;
+	struct emetteur *emr;
 	struct tm *ts_begin;
 
 	if (stat(output_dir, &fstat) == -1)
@@ -1453,8 +1460,12 @@ output_kml(struct anfr_set *set, const char *output_dir, const char *source_name
 	snprintf(path, sizeof(path), "%s/anfr_departement", output_dir);
 	if (stat(path, &fstat) == -1)
 		mkdir(path, 0755);
+	snprintf(path, sizeof(path), "%s/anfr_systeme", output_dir);
+	if (stat(path, &fstat) == -1)
+		mkdir(path, 0755);
 	bzero(kmls_tpo, sizeof(kmls_tpo));
 	bzero(kmls_dept, sizeof(kmls_dept));
+	bzero(kmls_sys, sizeof(kmls_sys));
 
 	/* open the main kml files */
 	snprintf(path, sizeof(path), "%s/anfr_proprietaires.kml", output_dir);
@@ -1564,6 +1575,31 @@ output_kml(struct anfr_set *set, const char *output_dir, const char *source_name
 		kml_add_placemark_point(k_dept, sup->tpo_id, tpo_name, sup->sup_id, buf, desc, sup->lat, sup->lon, (float)sup->sup_nm_haut, KML_STYLES[style], ts_begin);
 		kml_add_placemark_point(ka_dept, sup->dept, sup->dept_name, sup->sup_id, buf, desc, sup->lat, sup->lon, (float)sup->sup_nm_haut, KML_STYLES[style], ts_begin);
 		kml_add_placemark_point(ka_dept_light, sup->dept, sup->dept_name, sup->sup_id, "", "", sup->lat, sup->lon, (float)sup->sup_nm_haut, KML_STYLES[style], ts_begin);
+		/* append placemark to systeme kmls */
+		bzero(sup_systeme_ids, sizeof(sup_systeme_ids));
+		for (n=0; n<sup->sta_count; n++) {
+			sta = station_get(set->stations, &sup->sta_nm_anfr[n]);
+			if (!sta)
+				continue;
+			for (e=0; e<sta->emetteur_count; e++) {
+				emr = sta->emetteurs[e];
+				if (sup_systeme_ids[emr->systeme_id])
+					continue; // support already recorded in that systeme id
+				/* find kml file matching the systeme */
+				if (!kmls_sys[emr->systeme_id]) {
+					strncpy(buf2, emr->emr_lb_systeme, sizeof(buf2));
+					strreplace(buf2, sizeof(buf2), '/', '_');
+					snprintf(path, sizeof(path), "%s/anfr_systeme/anfr_systeme_%s.kml", output_dir, buf2);
+					snprintf(buf2, sizeof(buf2), "%s %s", source_name, emr->emr_lb_systeme);
+					kmls_sys[emr->systeme_id] = kml_open(path, buf2);
+					kml_count++;
+				}
+				k_sys = kmls_sys[emr->systeme_id];
+				snprintf(buf2, sizeof(buf2), "%s, %s", sup->dept_name, emr->emr_lb_systeme);
+				kml_add_placemark_point(k_sys, sup->dept, buf2, sup->sup_id, buf, desc, sup->lat, sup->lon, (float)sup->sup_nm_haut, KML_STYLES[style], ts_begin);
+				sup_systeme_ids[emr->systeme_id] = 1;
+			}
+		}
 	}
 
 	/* close all kml files */
@@ -1576,6 +1612,11 @@ output_kml(struct anfr_set *set, const char *output_dir, const char *source_name
 		if (!kmls_dept[idx])
 			continue;
 		kml_close(kmls_dept[idx]);
+	}
+	for (idx=0; idx<SYSTEMES_ID_MAX; idx++) {
+		if (!kmls_sys[idx])
+			continue;
+		kml_close(kmls_sys[idx]);
 	}
 	kml_close(ka_tpo);
 	kml_close(ka_dept);
@@ -1763,6 +1804,7 @@ kml_close(struct kml *kml)
 		fwrite(doc->placemarks, doc->placemarks_size, 1, kml->f);
 		fwrite(KML_DOC_END, sizeof(KML_DOC_END)-1, 1, kml->f);
 		free(doc->placemarks);
+		free(doc->name);
 		free(doc);
 	}
 
@@ -1795,7 +1837,7 @@ kml_add_placemark_point(struct kml *kml, int doc_id, const char *doc_name, int i
             errx(1, "kml reached maximum document count %d", KML_DOC_MAX);
 		doc = xmalloc_zero(sizeof(struct kml_doc));
 		doc->id = doc_id;
-		doc->name = doc_name;
+		doc->name = strdup(doc_name);
 		kml->docs[kml->docs_count] = doc;
 		kml->docs_count++;
 	}
@@ -1983,4 +2025,11 @@ utf8_to_iso8859(char *s)
 			*d++ = *s++ + 0x40;
 	}
 	*d = '\0';
+}
+
+void
+strreplace(char *buf, int size, char needle, char replace)
+{
+	while((buf = strchr(buf, needle)) != NULL)
+		*buf++ = replace;
 }
