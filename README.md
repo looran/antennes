@@ -6,16 +6,17 @@ Features:
 * Each placemark contains all informations about _support_, _stations_, _emetteurs_ and _antennes_ on the site
 * Each placemark is colored in red or orange if it has received modifications in the last 1 or 3 months
 
-You can download [pre-generated KML files here](https://ferme.ydns.eu/antennes/), with 2 files per month period:
-* `anfr_YYYY-MM_departements.kml` [~200MB] KML file containing all _supports_ organised by department
-* `anfr_YYYY-MM_departements_light.kml` [~30MB] KML file containing all _supports_ with no description
-* `anfr_YYYY-MM_proprietaires.kml` [~200MB] KML file containing all _supports_ organised by proprietaire
+You can download [pre-generated KML files here](https://ferme.ydns.eu/antennes/), with 2 files per month period since 2015:
+KML exports and statistics on french antennas based on ANFR data from 2015 to now
+* `anfr_YYYY-MM_departements.kml` [~200MB] KML file containing all _supports_ organised by _departement_
+* `anfr_YYYY-MM_departements_light.kml` [~30MB] KML file containing all _supports_ organised by _departement_ and with no description
+* `anfr_YYYY-MM_proprietaires.kml` [~200MB] KML file containing all _supports_ organised by _proprietaire_
 * `anfr_YYYY-MM_stats.txt` [~2KB] statistics for the period
 
 Additionally in [`split/`](https://ferme.ydns.eu/antennes/split/) you can find the splited KML files for each period:
-* `split/anfr_YYYY-MM_departement/anfr_YYYY-MM_departement_<dept-id>.kml` [<10MB]
-* `split/anfr_YYYY-MM_proprietaire/anfr_YYYY-MM_proprietaire_<prop-id>_<prop-name>.kml` [<30MB]
-* `split/anfr_YYYY-MM_kml_split.zip` [~60MB] archive containing all split kml files for the period
+* `split/anfr_YYYY-MM_departement/anfr_YYYY-MM_departement_<dept-id>.kml` [<10MB] a KML file with _supports_ for a single _departement_
+* `split/anfr_YYYY-MM_proprietaire/anfr_YYYY-MM_proprietaire_<prop-id>_<prop-name>.kml` [<30MB] a KML file with _supports_ owned by a single _proprietaire_
+* `split/anfr_YYYY-MM_systeme/anfr_YYYY-MM_systeme_<sys-id>_<prop-name>.kml` [12KB-200MB] a KML file with _supports_ that host a given system, organized by _departement_
 
 ![example usage: antennes KML file imported in Google Earth](doc/antennes_googleearth.png)<br/>
 _example usage: antennes KML file imported in Google Earth_
@@ -40,9 +41,12 @@ Query and export KML files from ANFR radio sites public data
 -v       verbose logging
 if neither -s or -k are specified, this program only loads the data.
 output kml files hierarchy:
-   anfr.kml : all supports in a single file, one document section per proprietaire
+   anfr_proprietaires.kml : all supports in a single file, one section per proprietaire
+   anfr_departements.kml : all supports in a single file, one section per departement
+   anfr_departements_light.kml : all supports in a single file, one section per departement, no description
    anfr_proprietaire/anfr_proprietaire_<proprietaire-id>_<proprietaire-name>.kml : one file per proprietaire
    anfr_departement/anfr_departement_<dept-id>.kml : one file per departement
+   anfr_systeme/anfr_systeme_<sys-name>.kml : one file per systeme, one section per departement
 kml placemark colors:
    orange for supports with stations updated in less than 3 months, red for 1 month, blue otherwise
 ```
