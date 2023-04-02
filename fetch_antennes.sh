@@ -17,7 +17,7 @@ trace mkdir -p $DL_DIR
 trace mkdir -p $EXTRACT_DIR
 [ $offline -eq 0 ] && trace curl "https://www.data.gouv.fr/api/1/datasets/$ANTENNES_DATASET/" > $DL_DIR/dataset.json
 trace python -m json.tool $DL_DIR/dataset.json $DL_DIR/dataset_beautify.json
-cat $DL_DIR/dataset.json |jq -r ".resources[] | .published+\";\"+.title+\";\"+.url" > $DL_DIR/urls.txt
+cat $DL_DIR/dataset.json |jq -r ".resources[] | .last_modified+\";\"+.title+\";\"+.url" > $DL_DIR/urls.txt
 
 lastperiod=""
 sets_done=0
