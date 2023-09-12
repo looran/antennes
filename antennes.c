@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <inttypes.h>
 #include <strings.h>
 #include <limits.h>
 #include <sys/stat.h>
@@ -319,11 +320,21 @@ struct bande {
 	struct sta_nm sta_nm;
 	int ban_id;
 	int emr_id;
-	float ban_nb_f_deb;
+	uint64_t ban_nb_f_deb;
 	char *ban_nb_f_deb_str;
-	float ban_nb_f_fin;
+	uint64_t ban_nb_f_fin;
 	char *ban_nb_f_fin_str;
 	char *ban_fg_unite;
+};
+/* used when computing bands per exploitant */
+struct bande_tree {
+	int emr_count;
+	uint64_t ban_nb_f_deb;
+	char *ban_nb_f_deb_str;
+	uint64_t ban_nb_f_fin;
+	char *ban_nb_f_fin_str;
+	int systemes_count[SYSTEMES_ID_MAX];
+	struct bande_tree *next; /* band with higher ban_nb_f_deb, or same ban_nb_f_deb and higher ban_nb_f_fin */
 };
 
 /* antennes have an integer id, max value of 7878184 as of 20220729 obtained by:
@@ -409,14 +420,15 @@ void				 types_antenne_free(struct f_type_antenne *);
 char				*type_antenne_get(struct f_type_antenne *, int);
 /* output file */
 void				 output_kml(struct anfr_set *, const char *, const char *);
+void				 output_bands(struct anfr_set *, const char *, const char *);
 /* csv */
 void		 csv_open(struct csv *, char *, int);
 void		 csv_close(struct csv *);
-int			 csv_line(struct csv *);
+int		 csv_line(struct csv *);
 char		*csv_field(struct csv *);
 void		 csv_int(struct csv *, int *, char **);
 void		 csv_int16(struct csv *, uint32_t *, char **);
-void		 csv_float(struct csv *, float *, char **);
+void		 csv_float(struct csv *, double *, char **);
 void		 csv_stanm(struct csv *, struct sta_nm *);
 void		 csv_str(struct csv *, char **);
 void		 csv_date(struct csv *, struct tm *, char **);
@@ -433,6 +445,7 @@ int			 tm_diff(struct tm *, struct tm *);
 int			 next_smallest_positive_int(int *, int, int, int, int *);
 int			 atoi_fast(const char *);
 uint64_t	 atoi16_fast(const char *);
+double		 atof_fast(char *);
 char		*itoa_u32(uint32_t, char *);
 char		*itoa_i32(int32_t, char *);
 void		 utf8_to_iso8859(char *);
@@ -457,8 +470,9 @@ void		 strreplace(char *, int, char, char);
 __attribute__((__noreturn__)) void
 usageexit()
 {
-	printf("usage: antennes [-Cv] [-k <dir>] <data_dir>\n");
+	printf("usage: antennes [-Cv] [-b <dir>] [-k <dir>] <data_dir>\n");
 	printf("Query and export KML files from ANFR radio sites public data\n");
+	printf("-b <dir> export csv bands statistics to this directory\n");
 	printf("-C       do not set any kml placemark colors\n");
 	printf("-k <dir> export kml files to this directory\n");
 	printf("-s       display antennes statistics\n");
@@ -481,12 +495,15 @@ main(int argc, char *argv[])
 {
 	struct anfr_set *set;
 	int ch, stats = 0;
-	char *kml_export = NULL;
+	char *kml_export = NULL, *bands_export = NULL;
 	time_t now;
 
 	bzero(&conf, sizeof(conf));
-	while ((ch = getopt(argc, argv, "Chk:sv")) != -1) {
+	while ((ch = getopt(argc, argv, "b:Chk:sv")) != -1) {
 		switch (ch) {
+			case 'b':
+				bands_export = optarg;
+				break;
 			case 'C':
 				conf.no_color = 1;
 				break;
@@ -525,6 +542,11 @@ main(int argc, char *argv[])
 	if (kml_export) {
 		info("[*] exporting kml to %s\n", kml_export);
 		output_kml(set, kml_export, basename(argv[0]));
+	}
+
+	if (bands_export) {
+		info("[*] exporting bands usage to %s\n", bands_export);
+		output_bands(set, bands_export, basename(argv[0]));
 	}
 
 #ifdef DEBUG
@@ -1241,6 +1263,7 @@ bandes_load(char *path, struct f_emetteur *emetteurs)
 	struct sta_nm sta_nm;
 	struct emetteur *emr;
 	int ban_id;
+	double deb, fin;
 
 	bandes = xmalloc_zero(sizeof(struct f_bande));
 	csv = &bandes->csv;
@@ -1258,9 +1281,25 @@ bandes_load(char *path, struct f_emetteur *emetteurs)
 		memcpy(&ban->sta_nm, &sta_nm, sizeof(sta_nm));
 		ban->ban_id = ban_id;
 		csv_int(csv, &ban->emr_id, NULL);
-		csv_float(csv, &ban->ban_nb_f_deb, &ban->ban_nb_f_deb_str);
-		csv_float(csv, &ban->ban_nb_f_fin, &ban->ban_nb_f_fin_str);
+		csv_float(csv, &deb, &ban->ban_nb_f_deb_str);
+		csv_float(csv, &fin, &ban->ban_nb_f_fin_str);
 		csv_str(csv, &ban->ban_fg_unite);
+		if (ban->ban_fg_unite) {
+			switch (ban->ban_fg_unite[0]) {
+			case 'K':
+				ban->ban_nb_f_deb = deb * 1000;
+				ban->ban_nb_f_fin = fin * 1000;
+				break;
+			case 'M':
+				ban->ban_nb_f_deb = deb * 1000000;
+				ban->ban_nb_f_fin = fin * 1000000;
+				break;
+			case 'G':
+				ban->ban_nb_f_deb = deb * 1000000000;
+				ban->ban_nb_f_fin = fin * 1000000000;
+				break;
+			}
+		}
 
 		emr = emetteur_get(emetteurs, ban->emr_id);
 		if (!emr) {
@@ -1324,10 +1363,10 @@ antennes_load(char *path, struct f_station *stations)
 			aer->aer_id = aer_id;
 			aer->aer_id_str = aer_id_str;
 			csv_int(csv, &aer->tae_id, NULL);
-			csv_float(csv, &aer->aer_nb_dimension, &aer->aer_nb_dimension_str);
+			csv_str(csv, &aer->aer_nb_dimension_str); // we may need csv_float() in the future
 			csv_str(csv, &aer->aer_fg_rayon);
-			csv_float(csv, &aer->aer_nb_azimut, &aer->aer_nb_azimut_str);
-			csv_float(csv, &aer->aer_nb_alt_bas, &aer->aer_nb_alt_bas_str);
+			csv_str(csv, &aer->aer_nb_azimut_str); // we may need csv_float() in the future
+			csv_str(csv, &aer->aer_nb_alt_bas_str); // we may need csv_float() in the future
 			csv_int(csv, NULL, &aer->sup_id_str);
 			aer->emetteur_count = 0;
 		}
@@ -1625,6 +1664,126 @@ output_kml(struct anfr_set *set, const char *output_dir, const char *source_name
 	info("created %d kml files\n", kml_count);
 }
 
+/* create one csv file per exploitant containing all the bands sorted by frequency together with their emetteur count and systemes sorted by count
+ * <expoitant>_bands.csv
+ * freq_min;freq_max;emr_count;systeme1_name;systeme1_count;systeme2_name;systeme2_count[...] */
+void
+output_bands(struct anfr_set *set, const char *output_dir, const char *source_name)
+{
+	struct bande_tree tree[EXPLOITANT_ID_MAX];
+	struct bande_tree *ce, *ne, *pe;
+	int count[EXPLOITANT_ID_MAX];
+	struct support *sup;
+	struct station *sta;
+	struct emetteur *emr;
+	struct bande *ban;
+	int prepend, append, s, sc, n, e, b;
+	struct stat fstat;
+	const char *exploitant_name;
+	char *lb;
+	int id;
+	char path[PATH_MAX];
+	FILE *csv;
+
+
+	bzero(tree, sizeof(tree));
+	bzero(count, sizeof(count));
+	if (stat(output_dir, &fstat) == -1)
+		mkdir(output_dir, 0755);
+
+	/* for all stations, insert bands in the exploitants bands tree */
+	for (s=0, sc=0;
+			s < SUPPORTS_ID_MAX && sc < set->supports->count;
+			s++) {
+		sup = set->supports->table[s];
+		if (!sup)
+			continue;
+		for (n=0; n<sup->sta_count; n++) {
+			sta = station_get(set->stations, &sup->sta_nm_anfr[n]);
+			if (!sta)
+				continue;
+			for (e=0; e<sta->emetteur_count; e++) {
+				emr = sta->emetteurs[e];
+				for (b=0; b<emr->bande_count; b++) {
+					ban = emr->bandes[b];
+					/* insert this station band into exploitant tree */
+					pe = NULL;               /* previous entry */
+					ce = &tree[sta->adm_id]; /* current entry */
+					while (1) {
+						prepend = 0;
+						append = 0;
+						if (ban->ban_nb_f_deb == ce->ban_nb_f_deb && ban->ban_nb_f_fin == ce->ban_nb_f_fin) {
+							/* increment entry counters */
+							ce->emr_count++;
+							ce->systemes_count[emr->systeme_id]++;
+							break;
+						} else if ((ban->ban_nb_f_deb < ce->ban_nb_f_deb) || (ban->ban_nb_f_deb == ce->ban_nb_f_deb && ban->ban_nb_f_fin < ce->ban_nb_f_fin)) {
+							prepend = 1;
+						} else if (!ce->next && ((ban->ban_nb_f_deb > ce->ban_nb_f_deb) || (ban->ban_nb_f_deb == ce->ban_nb_f_deb && ban->ban_nb_f_fin > ce->ban_nb_f_fin))) {
+							append = 1;
+						}
+						if (prepend || append) {
+							/* create new entry */
+							ne = malloc(sizeof(struct bande_tree));
+							ne->emr_count = 1;
+							ne->ban_nb_f_deb = ban->ban_nb_f_deb;
+							ne->ban_nb_f_deb_str = ban->ban_nb_f_deb_str;
+							ne->ban_nb_f_fin = ban->ban_nb_f_fin;
+							ne->ban_nb_f_fin_str = ban->ban_nb_f_fin_str;
+							bzero(ne->systemes_count, sizeof(ne->systemes_count));
+							ne->systemes_count[emr->systeme_id]++;
+							ne->next = NULL;
+							/* insert new entry */
+							if (prepend) {
+								if (!pe)
+									errx(1, "band bellow 0mhz ! deb=%" PRIu64 " fin=%" PRIu64, ban->ban_nb_f_deb, ban->ban_nb_f_fin);
+								pe->next = ne;
+								ne->next = ce;
+							} else {
+								ce->next = ne;
+							}
+							count[sta->adm_id]++;
+							break;
+						}
+						/* search next entry */
+						pe = ce;
+						ce = ce->next;
+					}
+				}
+			}
+		}
+	}
+
+	/* write csv */
+	for (n=0; n<EXPLOITANT_ID_MAX; n++) {
+		if (count[n] == 0)
+			continue;
+
+		exploitant_name = exploitant_get_name(set->exploitants, n);
+		snprintf(path, sizeof(path), "%s/%03d_%s_bands.csv", output_dir, n, pathable(exploitant_name));
+
+		csv = fopen(path, "w");
+		fprintf(csv, "# %d - %s: %d bands\n", n, exploitant_name, count[n]);
+		fprintf(csv, "# freq_min;freq_max;emr_count;systeme1_name;systeme1_count[...]\n");
+
+		for (ce=tree[n].next; ce; ce=ce->next) {
+			id = 0;
+			s = 0;
+			fprintf(csv, "%" PRIu64 ";%" PRIu64 ";%d", ce->ban_nb_f_deb, ce->ban_nb_f_fin, ce->emr_count);
+			while ( (s = next_smallest_positive_int(ce->systemes_count, SYSTEMES_ID_MAX, s, id, &id)) > 0 ) {
+				lb = set->emetteurs->systemes_lb[id];
+				fprintf(csv, ";%s;%d", lb, s);
+			}
+			fprintf(csv, "\n");
+#ifdef DEBUG
+			free(ce);
+#endif
+		}
+
+		fclose(csv);
+	}
+}
+
 void
 csv_open(struct csv *csv, char *path, int conv)
 {
@@ -1707,16 +1866,14 @@ csv_int16(struct csv *csv, uint32_t *val, char **orig)
 }
 
 void
-csv_float(struct csv *csv, float *val, char **orig)
+csv_float(struct csv *csv, double *val, char **orig)
 {
 	char *tok = csv_field(csv);
 
 	if (tok) {
 		if (orig)
 			*orig = tok;
-		// TODO implement float parsing, not needed for now since we use only the string value
-		// *val = atoi_fast(tok);
-		*val = 0.0;
+		*val = atof_fast(tok);
 	}
 }
 
@@ -1880,7 +2037,7 @@ pathable(const char *s)
 	strncpy(buf, s, sizeof(buf)-1);
 	len = strlen(buf);
 	for (i=0; i<len; i++) {
-		if (buf[i] == ' ')
+		if (!isascii(buf[i]) || buf[i] == ' ')
 			buf[i] = '_';
 		if (buf[i] == '/' || buf[i] == '\'')
 			buf[i] = '-';
@@ -1975,6 +2132,45 @@ atoi16_fast(const char *str)
 	}
 
 	return val;
+}
+
+/* fast atof returning float, with the following assumptions on the 's' string:
+ * - comma separates integer part from fractional part, if any
+ * - only digits and possibly one comma
+ * - limited number of digits, before and after comma
+ * - ends with '\0' */
+double
+atof_fast(char *s)
+{
+	double r;
+	int c; /* comma position */
+	int i; /* position in tok */
+
+	r = 0.0;
+
+	/* locate comma */
+	for (c=0; s[c] != ',' && s[c] != '\0'; c++);
+
+	/* calculate r */
+	for (i=0; s[i] != '\0'; i++) {
+		switch (c - i) {
+		case 0: break; /* comma */
+		case 1: r += (s[i] - '0'); break;
+		case 2: r += (s[i] - '0') * 10; break;
+		case 3: r += (s[i] - '0') * 100; break;
+		case 4: r += (s[i] - '0') * 1000; break;
+		case 5: r += (s[i] - '0') * 10000; break;
+		case 6: r += (s[i] - '0') * 100000; break;
+		case 7: r += (s[i] - '0') * 1000000; break;
+		case -1: r += (s[i] - '0') * 0.1; break;
+		case -2: r += (s[i] - '0') * 0.01; break;
+		case -3: r += (s[i] - '0') * 0.001; break;
+		case -4: r += (s[i] - '0') * 0.0001; break;
+		default: errx(1, "atof_fast: too many digits: %s", s);
+		}
+	}
+
+	return r;
 }
 
 /* from Milo Yip itoa-benchmark naive implementation */

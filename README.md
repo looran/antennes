@@ -32,8 +32,9 @@ NOTE: Some mapping software do not support large numbers of placemarks. Consider
 # Usage
 
 ```
-usage: antennes [-Cv] [-k <dir>] <data_dir>
+usage: antennes [-Cv] [-b <dir>] [-k <dir>] <data_dir>
 Query and export KML files from ANFR radio sites public data
+-b <dir> export csv bands statistics to this directory
 -C       do not set any kml placemark colors
 -k <dir> export kml files to this directory
 -s       display antennes statistics
