@@ -186,9 +186,12 @@ struct kml *
 kml_open(const char *path, const char *name)
 {
 	struct kml *kml = xmalloc_zero(sizeof(struct kml));
+	struct stat fstat;
 	char buf[1024];
 	int len;
 
+	if (stat(path, &fstat) >= 0)
+		errx(1, "kml file already exists: %s", path);
 	verb("creating kml file %s\n", path);
 	kml->path = strdup(path);
 	kml->f = fopen(path, "w");
