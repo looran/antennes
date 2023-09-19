@@ -248,8 +248,8 @@ kml_add_placemark_point(struct kml *kml, int doc_id, const char *doc_name, int i
 		}
 	}
 	if (!doc) {
-        if (kml->docs_count == KML_DOC_MAX)
-            errx(1, "kml reached maximum document count %d", KML_DOC_MAX);
+		if (kml->docs_count == KML_DOC_MAX)
+		    errx(1, "kml reached maximum document count %d", KML_DOC_MAX);
 		doc = xmalloc_zero(sizeof(struct kml_doc));
 		doc->id = doc_id;
 		doc->name = strdup(doc_name);
