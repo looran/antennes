@@ -1473,11 +1473,11 @@ output_kml(struct anfr_set *set, const char *output_dir, const char *source_name
 			snprintf(buf2, sizeof(buf2), "[%d] ", sup->sta_count);
 		snprintf(buf, sizeof(buf), "%s%s", buf2, expllist);
 		/* append placemark to kmls */
-		kml_add_placemark_point(k_tpo,  sup->tpo_id, tpo_name, sup->sup_id, buf, desc, sup->lat, sup->lon, (float)sup->sup_nm_haut, KML_STYLES[style], ts_begin);
-		kml_add_placemark_point(ka_tpo,   sup->tpo_id, tpo_name, sup->sup_id, buf, desc, sup->lat, sup->lon, (float)sup->sup_nm_haut, KML_STYLES[style], ts_begin);
-		kml_add_placemark_point(k_dept, sup->tpo_id, tpo_name, sup->sup_id, buf, desc, sup->lat, sup->lon, (float)sup->sup_nm_haut, KML_STYLES[style], ts_begin);
-		kml_add_placemark_point(ka_dept, sup->dept, sup->dept_name, sup->sup_id, buf, desc, sup->lat, sup->lon, (float)sup->sup_nm_haut, KML_STYLES[style], ts_begin);
-		kml_add_placemark_point(ka_dept_light, sup->dept, sup->dept_name, sup->sup_id, "", "", sup->lat, sup->lon, (float)sup->sup_nm_haut, KML_STYLES[style], ts_begin);
+		kml_add_placemark_point(k_tpo,  sup->tpo_id, tpo_name, sup->sup_id, buf, desc, sup->lat, sup->lon, (float)sup->sup_nm_haut, "relativeToGround", KML_STYLES[style], ts_begin);
+		kml_add_placemark_point(ka_tpo,   sup->tpo_id, tpo_name, sup->sup_id, buf, desc, sup->lat, sup->lon, (float)sup->sup_nm_haut, "relativeToGround", KML_STYLES[style], ts_begin);
+		kml_add_placemark_point(k_dept, sup->tpo_id, tpo_name, sup->sup_id, buf, desc, sup->lat, sup->lon, (float)sup->sup_nm_haut, "relativeToGround", KML_STYLES[style], ts_begin);
+		kml_add_placemark_point(ka_dept, sup->dept, sup->dept_name, sup->sup_id, buf, desc, sup->lat, sup->lon, (float)sup->sup_nm_haut, "relativeToGround", KML_STYLES[style], ts_begin);
+		kml_add_placemark_point(ka_dept_light, sup->dept, sup->dept_name, sup->sup_id, "", "", sup->lat, sup->lon, (float)sup->sup_nm_haut, "relativeToGround", KML_STYLES[style], ts_begin);
 		/* append placemark to systeme kmls */
 		bzero(sup_systeme_ids, sizeof(sup_systeme_ids));
 		for (n=0; n<sup->sta_count; n++) {
@@ -1499,7 +1499,7 @@ output_kml(struct anfr_set *set, const char *output_dir, const char *source_name
 				}
 				k_sys = kmls_sys[emr->systeme_id];
 				snprintf(buf2, sizeof(buf2), "%s, %s", sup->dept_name, emr->emr_lb_systeme);
-				kml_add_placemark_point(k_sys, sup->dept, buf2, sup->sup_id, buf, desc, sup->lat, sup->lon, (float)sup->sup_nm_haut, KML_STYLES[style], ts_begin);
+				kml_add_placemark_point(k_sys, sup->dept, buf2, sup->sup_id, buf, desc, sup->lat, sup->lon, (float)sup->sup_nm_haut, "relativeToGround", KML_STYLES[style], ts_begin);
 				sup_systeme_ids[emr->systeme_id] = 1;
 			}
 		}

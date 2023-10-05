@@ -63,7 +63,7 @@ void		 csv_date(struct csv *, struct tm *, char **);
 /* kml */
 struct kml	*kml_open(const char *, const char *, const char *);
 void		 kml_close(struct kml *);
-void		 kml_add_placemark_point(struct kml *, int, const char *, int, char *, char *, float, float, float, const char *, const struct tm *);
+void		 kml_add_placemark_point(struct kml *, int, const char *, int, char *, char *, float, float, float, const char *, const char *, const struct tm *);
 /* utils */
 void		 coord_dms_to_dd(int [3], char *, int [3], char *, float *, float *);
 const char *pathable(const char *);

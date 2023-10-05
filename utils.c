@@ -47,7 +47,7 @@
 	"\t\t\t  <begin>%s</begin>\n" \
 	"\t\t\t</TimeSpan>\n" \
 	"\t\t\t<Point>\n" \
-	"\t\t\t\t<altitudeMode>relativeToGround</altitudeMode>\n" \
+	"\t\t\t\t<altitudeMode>%s</altitudeMode>\n" \
 	"\t\t\t\t<coordinates>%f,%f,%f</coordinates>\n" \
 	"\t\t\t</Point>\n" \
 	"\t\t</Placemark>\n"
@@ -254,7 +254,7 @@ kml_close(struct kml *kml)
 
 #define DESCRIPTION_BUF_SIZE 65536
 void
-kml_add_placemark_point(struct kml *kml, int doc_id, const char *doc_name, int id, char *name, char *description, float lat, float lon, float haut, const char *styleurl, const struct tm *ts_begin)
+kml_add_placemark_point(struct kml *kml, int doc_id, const char *doc_name, int id, char *name, char *description, float lat, float lon, float haut, const char *haut_mode, const char *styleurl, const struct tm *ts_begin)
 {
 	char buf[DESCRIPTION_BUF_SIZE];
 	char buf2[256];
@@ -287,7 +287,7 @@ kml_add_placemark_point(struct kml *kml, int doc_id, const char *doc_name, int i
 		tsbuf[0] = '\0';
 	if (styleurl)
 		snprintf(buf2, sizeof(buf2), KML_PLACEMARK_POINT_STYLE, styleurl);
-	len = snprintf(buf, sizeof(buf), KML_PLACEMARK_POINT, id, name, description, buf2, id, tsbuf, lon, lat, haut);
+	len = snprintf(buf, sizeof(buf), KML_PLACEMARK_POINT, id, name, description, buf2, id, tsbuf, haut_mode, lon, lat, haut);
 	if (len >= sizeof(buf))
 		errx(1, "kml_add_placemark_point internal buffer limit reached (%d)", len);
 	doc->placemarks = realloc(doc->placemarks, doc->placemarks_size + len);
