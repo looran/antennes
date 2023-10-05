@@ -212,6 +212,8 @@ kml_close(struct kml *kml)
 	char buf[1024];
 	int len, idx;
 
+	verb("closing kml file %s with %d docs\n", kml->path, kml->docs_count);
+
 	/* write KML documents */
 	for (idx=0; idx<kml->docs_count; idx++) {
 		doc = kml->docs[idx];
