@@ -65,7 +65,7 @@
 extern struct conf conf;
 
 void
-csv_open(struct csv *csv, char *path, int conv)
+csv_open(struct csv *csv, char *path, int conv, char sep, char quote)
 {
 	int f;
 	struct stat fstat;
@@ -86,6 +86,10 @@ csv_open(struct csv *csv, char *path, int conv)
 	csv->size = fstat.st_size;
 	csv->p = csv->file;
 	csv->conv = conv;
+	csv->sep[0] = sep;
+	csv->sep[1] = '\0';
+	csv->quote[0] = quote;
+	csv->quote[1] = '\0';
 }
 
 void
@@ -113,9 +117,23 @@ csv_field(struct csv *csv)
 	char *tok;
 
 	csv->field_count++;
-	tok = strsep(&csv->line, ";");
-	if (!tok)
-		tok = ""; /* in case the field is not found (old csv format), set it to an empty string */
+	if (csv->quote[0] && csv->line[0] == csv->quote[0]) {
+		/* handle quoted field */
+		csv->line++;
+		tok = csv->line;
+		/* look for terminating quote, followed by separator or null byte */
+		do {
+			csv->line++;
+			csv->line = strchr(csv->line, csv->quote[0]);
+		} while (*(csv->line+1) != '\0' && *(csv->line+1) != csv->sep[0]);
+		*csv->line = '\0';
+		csv->line += 2; /* go to next field */
+	} else {
+		/* handle non-quoted field */
+		tok = strsep(&csv->line, csv->sep);
+		if (!tok)
+			tok = ""; /* in case the field is not found (old csv format), set it to an empty string */
+	}
 	return tok;
 }
 

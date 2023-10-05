@@ -474,7 +474,7 @@ natures_load(char *path)
 
 	natures = xmalloc_zero(sizeof(struct f_nature));
 	csv = &natures->csv;
-	csv_open(csv, path, CSV_CONV_UTF8_TO_ISO8859);
+	csv_open(csv, path, CSV_CONV_UTF8_TO_ISO8859, ';', 0);
 
 	while (csv_line(csv)) {
 		if (!isdigit(csv->line[0]))
@@ -527,7 +527,7 @@ supports_load(char *path)
 	supports = xmalloc_zero(sizeof(struct f_support));
 	csv = &supports->csv;
 
-	csv_open(csv, path, CSV_NORMAL);
+	csv_open(csv, path, CSV_NORMAL, ';', 0);
 	while (csv_line(csv)) {
 		if (!isdigit(csv->line[0]))
 			continue; /* comment or header */
@@ -599,7 +599,7 @@ proprietaires_load(char *path)
 
 	proprietaires = xmalloc_zero(sizeof(struct f_proprietaire));
 	csv = &proprietaires->csv;
-	csv_open(csv, path, CSV_CONV_UTF8_TO_ISO8859);
+	csv_open(csv, path, CSV_CONV_UTF8_TO_ISO8859, ';', 0);
 
 	while (csv_line(csv)) {
 		if (!isdigit(csv->line[0]))
@@ -657,7 +657,7 @@ stations_load(char *path)
 
 	stations = xmalloc_zero(sizeof(struct f_station));
 	csv = &stations->csv;
-	csv_open(csv, path, CSV_NORMAL);
+	csv_open(csv, path, CSV_NORMAL, ';', 0);
 
 	while (csv_line(csv)) {
 		if (!isdigit(csv->line[0]))
@@ -935,7 +935,7 @@ exploitants_load(char *path)
 
 	exploitants = xmalloc_zero(sizeof(struct f_exploitant));
 	csv = &exploitants->csv;
-	csv_open(csv, path, CSV_CONV_UTF8_TO_ISO8859);
+	csv_open(csv, path, CSV_CONV_UTF8_TO_ISO8859, ';', 0);
 
 	while (csv_line(csv)) {
 		if (!isdigit(csv->line[0]))
@@ -995,7 +995,7 @@ emetteurs_load(char *path, struct f_station *stations, struct f_antenne *antenne
 
 	emetteurs = xmalloc_zero(sizeof(struct f_emetteur));
 	csv = &emetteurs->csv;
-	csv_open(csv, path, CSV_NORMAL);
+	csv_open(csv, path, CSV_NORMAL, ';', 0);
 
 	while (csv_line(csv)) {
 		if (!isdigit(csv->line[0]))
@@ -1129,7 +1129,7 @@ bandes_load(char *path, struct f_emetteur *emetteurs)
 
 	bandes = xmalloc_zero(sizeof(struct f_bande));
 	csv = &bandes->csv;
-	csv_open(csv, path, CSV_NORMAL);
+	csv_open(csv, path, CSV_NORMAL, ';', 0);
 
 	while (csv_line(csv)) {
 		if (!isdigit(csv->line[0]))
@@ -1207,7 +1207,7 @@ antennes_load(char *path, struct f_station *stations)
 
 	antennes = xmalloc_zero(sizeof(struct f_antenne));
 	csv = &antennes->csv;
-	csv_open(csv, path, CSV_NORMAL);
+	csv_open(csv, path, CSV_NORMAL, ';', 0);
 
 	while (csv_line(csv)) {
 		if (!isdigit(csv->line[0]))
@@ -1300,7 +1300,7 @@ types_antenne_load(char *path)
 
 	types_antenne = xmalloc_zero(sizeof(struct f_type_antenne));
 	csv = &types_antenne->csv;
-	csv_open(csv, path, CSV_CONV_UTF8_TO_ISO8859);
+	csv_open(csv, path, CSV_CONV_UTF8_TO_ISO8859, ';', 0);
 
 	while (csv_line(csv)) {
 		if (!isdigit(csv->line[0]))

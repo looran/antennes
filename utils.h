@@ -18,6 +18,8 @@ struct csv {
 	int line_count;
 	int field_count;
 	int conv;
+	char sep[2];
+	char quote[2];
 };
 
 #define KML_STYLE_DISABLED 0
@@ -49,7 +51,7 @@ struct kml {
 };
 
 /* csv */
-void		 csv_open(struct csv *, char *, int);
+void		 csv_open(struct csv *, char *, int, char, char);
 void		 csv_close(struct csv *);
 int		 csv_line(struct csv *);
 char		*csv_field(struct csv *);
