@@ -213,7 +213,7 @@ kml_open(const char *path, const char *name, const char *desc)
 
 	if (stat(path, &fstat) >= 0)
 		errx(1, "kml file already exists: %s", path);
-	verb("creating kml file %s\n", path);
+	verb("creating KML file %s\n", path);
 	kml->path = strdup(path);
 	kml->f = fopen(path, "w");
 	if (!kml->f)
