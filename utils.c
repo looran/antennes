@@ -408,11 +408,18 @@ atof_fast(char *s)
 	double r;
 	int c; /* comma position */
 	int i; /* position in tok */
+	int neg = 0;
 
 	r = 0.0;
 
+	/* handle negative */
+	if (s[0] == '-') {
+		neg = 1;
+		s++;
+	}
+
 	/* locate comma */
-	for (c=0; s[c] != ',' && s[c] != '\0'; c++);
+	for (c=0; s[c] != ',' && s[c] != '.' && s[c] != '\0'; c++);
 
 	/* calculate r */
 	for (i=0; s[i] != '\0'; i++) {
@@ -432,6 +439,9 @@ atof_fast(char *s)
 		default: errx(1, "atof_fast: too many digits: %s", s);
 		}
 	}
+
+	if (neg)
+		r = -r;
 
 	return r;
 }
