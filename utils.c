@@ -436,7 +436,13 @@ atof_fast(char *s)
 		case -2: r += (s[i] - '0') * 0.01; break;
 		case -3: r += (s[i] - '0') * 0.001; break;
 		case -4: r += (s[i] - '0') * 0.0001; break;
-		default: errx(1, "atof_fast: too many digits: %s", s);
+		case -5: r += (s[i] - '0') * 0.00001; break;
+		case -6: r += (s[i] - '0') * 0.000001; break;
+		case -7: r += (s[i] - '0') * 0.0000001; break;
+		case -8: r += (s[i] - '0') * 0.00000001; break;
+		case -9: r += (s[i] - '0') * 0.000000001; break;
+		case -10: r += (s[i] - '0') * 0.0000000001; break;
+		default: errx(1, "atof_fast: too many digits (%d): %s", c-i, s);
 		}
 	}
 
