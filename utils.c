@@ -62,6 +62,8 @@
 	"</Folder>\n" \
 	"</kml>\n"
 
+extern struct conf conf;
+
 void
 csv_open(struct csv *csv, char *path, int conv)
 {

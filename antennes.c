@@ -327,6 +327,8 @@ void				 output_bands(struct anfr_set *, const char *, const char *);
 /* utils */
 void		 csv_stanm(struct csv *, struct sta_nm *);
 
+struct conf conf;
+
 __attribute__((__noreturn__)) void
 usageexit()
 {

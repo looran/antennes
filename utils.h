@@ -1,10 +1,10 @@
-static struct conf {
+struct conf {
 	struct tm now;
 	char now_str[64];
 	int no_color;
 	int verbose;
 	int warn_incoherent_data;
-} conf;
+};
 
 #define CSV_NORMAL 0
 #define CSV_CONV_UTF8_TO_ISO8859 1
