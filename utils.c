@@ -153,7 +153,8 @@ csv_float(struct csv *csv, double *val, char **orig)
 	if (tok) {
 		if (orig)
 			*orig = tok;
-		*val = atof_fast(tok);
+		if (val)
+			*val = atof_fast(tok);
 	}
 }
 
