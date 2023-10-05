@@ -287,6 +287,8 @@ struct anfr_set {
 	struct f_type_antenne *types_antenne;
 };
 
+#define KML_ANFR_DESCRIPTION "KML export of french emetteurs <5W based on ANFR data"
+
 __attribute__((__noreturn__)) void usageexit(void);
 /* input file processing */
 struct anfr_set		*set_load(char *);
@@ -1370,14 +1372,14 @@ output_kml(struct anfr_set *set, const char *output_dir, const char *source_name
 
 	/* open the main kml files */
 	snprintf(path, sizeof(path), "%s/anfr_proprietaires.kml", output_dir);
-	snprintf(buf, sizeof(buf), "%s per proprietaire", source_name);
-	ka_tpo = kml_open(path, buf);
+	snprintf(buf, sizeof(buf), "ANFR antennes %s per proprietaire", source_name);
+	ka_tpo = kml_open(path, buf, KML_ANFR_DESCRIPTION);
 	snprintf(path, sizeof(path), "%s/anfr_departements.kml", output_dir);
-	snprintf(buf, sizeof(buf), "%s per departement", source_name);
-	ka_dept = kml_open(path, buf);
+	snprintf(buf, sizeof(buf), "ANFR antennes %s per departement", source_name);
+	ka_dept = kml_open(path, buf, KML_ANFR_DESCRIPTION);
 	snprintf(path, sizeof(path), "%s/anfr_departements_light.kml", output_dir);
-	snprintf(buf, sizeof(buf), "%s per departement (light)", source_name);
-	ka_dept_light = kml_open(path, buf);
+	snprintf(buf, sizeof(buf), "ANFR antennes %s per departement (light)", source_name);
+	ka_dept_light = kml_open(path, buf, KML_ANFR_DESCRIPTION);
 	kml_count = 3;
 
 	/* iterate over supports and append to aggregated and per-proprietaire kml files */
@@ -1393,16 +1395,16 @@ output_kml(struct anfr_set *set, const char *output_dir, const char *source_name
 		/* find kml file matching the proprietaire */
 		if (!kmls_tpo[sup->tpo_id]) {
 			snprintf(path, sizeof(path), "%s/anfr_proprietaire/anfr_proprietaire_%d_%s.kml", output_dir, sup->tpo_id, pathable(tpo_name));
-			snprintf(buf, sizeof(buf), "%s %s (%d)", source_name, pathable(tpo_name), sup->tpo_id);
-			kmls_tpo[sup->tpo_id] = kml_open(path, buf);
+			snprintf(buf, sizeof(buf), "ANFR antennes %s %s (%d)", source_name, pathable(tpo_name), sup->tpo_id);
+			kmls_tpo[sup->tpo_id] = kml_open(path, buf, KML_ANFR_DESCRIPTION);
 			kml_count++;
 		}
 		k_tpo = kmls_tpo[sup->tpo_id];
 		/* find kml file matching the departement */
 		if (!kmls_dept[sup->dept]) {
 			snprintf(path, sizeof(path), "%s/anfr_departement/anfr_departement_%02X.kml", output_dir, sup->dept);
-			snprintf(buf, sizeof(buf), "%s %02X", source_name, sup->dept);
-			kmls_dept[sup->dept] = kml_open(path, buf);
+			snprintf(buf, sizeof(buf), "ANFR antennes %s %02X", source_name, sup->dept);
+			kmls_dept[sup->dept] = kml_open(path, buf, KML_ANFR_DESCRIPTION);
 			kml_count++;
 		}
 		k_dept = kmls_dept[sup->dept];
@@ -1491,8 +1493,8 @@ output_kml(struct anfr_set *set, const char *output_dir, const char *source_name
 					strncpy(buf2, emr->emr_lb_systeme, sizeof(buf2));
 					strreplace(buf2, sizeof(buf2), '/', '_');
 					snprintf(path, sizeof(path), "%s/anfr_systeme/anfr_systeme_%s.kml", output_dir, buf2);
-					snprintf(buf2, sizeof(buf2), "%s %s", source_name, emr->emr_lb_systeme);
-					kmls_sys[emr->systeme_id] = kml_open(path, buf2);
+					snprintf(buf2, sizeof(buf2), "ANFR antennes %s %s", source_name, emr->emr_lb_systeme);
+					kmls_sys[emr->systeme_id] = kml_open(path, buf2, KML_ANFR_DESCRIPTION);
 					kml_count++;
 				}
 				k_sys = kmls_sys[emr->systeme_id];

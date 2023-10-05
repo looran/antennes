@@ -61,7 +61,7 @@ void		 csv_float(struct csv *, double *, char **);
 void		 csv_str(struct csv *, char **);
 void		 csv_date(struct csv *, struct tm *, char **);
 /* kml */
-struct kml	*kml_open(const char *, const char *);
+struct kml	*kml_open(const char *, const char *, const char *);
 void		 kml_close(struct kml *);
 void		 kml_add_placemark_point(struct kml *, int, const char *, int, char *, char *, float, float, float, const char *, const struct tm *);
 /* utils */
