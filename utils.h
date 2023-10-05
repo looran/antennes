@@ -66,12 +66,12 @@ void		 kml_close(struct kml *);
 void		 kml_add_placemark_point(struct kml *, int, const char *, int, char *, char *, float, float, float, const char *, const char *, const struct tm *);
 /* utils */
 void		 coord_dms_to_dd(int [3], char *, int [3], char *, float *, float *);
-const char *pathable(const char *);
-int		 	 append_not_empty(char *, char *);
+const char	*pathable(const char *);
+int	 	 append_not_empty(char *, char *);
 void		*xmalloc_zero(size_t);
-int			 tm_diff(struct tm *, struct tm *);
-int			 next_smallest_positive_int(int *, int, int, int, int *);
-int			 atoi_fast(const char *);
+int		 tm_diff(struct tm *, struct tm *);
+int		 next_smallest_positive_int(int *, int, int, int, int *);
+int		 atoi_fast(const char *);
 uint64_t	 atoi16_fast(const char *);
 double		 atof_fast(char *);
 char		*itoa_u32(uint32_t, char *);
