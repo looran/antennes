@@ -17,11 +17,11 @@ trace mkdir -p $DL_DIR
 trace mkdir -p $EXTRACT_DIR
 [ $offline -eq 0 ] && trace curl "https://www.data.gouv.fr/api/1/datasets/$ANTENNES_DATASET/" > $DL_DIR/dataset.json
 trace python -m json.tool $DL_DIR/dataset.json $DL_DIR/dataset_beautify.json
-cat $DL_DIR/dataset.json |jq -r ".resources[] | .last_modified+\";\"+.title+\";\"+.url" > $DL_DIR/urls.txt
+cat $DL_DIR/dataset.json |jq -r ".resources[] | .last_modified+\";\"+.title+\";\"+.url+\";\"+.checksum.value" > $DL_DIR/urls.txt
 
 lastperiod=""
 sets_done=0
-cat $DL_DIR/urls.txt |egrep "\.zip$" |while IFS=";" read published title url; do
+cat $DL_DIR/urls.txt |egrep "\.zip;" |while IFS=";" read published title url sum; do
     period="$(echo $published |cut -d'-' -f1-2)"
     if [ -n "$lastperiod" -a "$lastperiod" != "$period" ]; then
         sets_done=$(($sets_done+1))
@@ -38,6 +38,9 @@ cat $DL_DIR/urls.txt |egrep "\.zip$" |while IFS=";" read published title url; do
     [ -e $DL_DIR/$filename -o $offline -eq 1 ] \
         && echo "file already downloaded" \
         || trace wget -P $DL_DIR "$url"
+    [ "$sum" != "$(trace sha1sum $DL_DIR/$filename |cut -d' ' -f1)" ] \
+        && echo "error: checksum verification failed for $DL_DIR/$filename" \
+        && exit 1
     mkdir -p $EXTRACT_DIR/$period
     trace 7z -aos -y x -o$EXTRACT_DIR/$period $DL_DIR/$filename >/dev/null
     lastperiod=$period
