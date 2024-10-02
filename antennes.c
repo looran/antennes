@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Laurent Ghigonis <ooookiwi@gmail.com>
+ * Copyright (c) 2022-2024 Laurent Ghigonis <ooookiwi@gmail.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -32,6 +32,8 @@
 #include <libgen.h>
 
 #include "utils.h"
+
+#define VERSION 1
 
 #define STA_NM_LEN 10
 #define STA_NM_DEPT_LEN 3
@@ -333,7 +335,7 @@ __attribute__((__noreturn__)) void
 usageexit()
 {
 	printf("usage: antennes [-Cv] [-b <dir>] [-k <dir>] <data_dir>\n");
-	printf("Query and export KML files from ANFR radio sites public data\n");
+	printf("antennes v%d, Query and export KML files from ANFR radio sites public data\n", VERSION);
 	printf("-b <dir> export csv bands statistics to this directory\n");
 	printf("-C       do not set any kml placemark colors\n");
 	printf("-k <dir> export kml files to this directory\n");
