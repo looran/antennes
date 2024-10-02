@@ -287,7 +287,7 @@ struct anfr_set {
 	struct f_type_antenne *types_antenne;
 };
 
-#define KML_ANFR_DESCRIPTION "KML export of french emetteurs <5W based on ANFR data"
+#define KML_ANFR_DESCRIPTION "KML export of french emetteurs bellow 5W based on ANFR data"
 
 __attribute__((__noreturn__)) void usageexit(void);
 /* input file processing */
