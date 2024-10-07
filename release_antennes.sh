@@ -77,11 +77,16 @@ do_release() {
 
 set -e
 
-[ $# -lt 2 ] && echo "usage: $0 <host> <host_dir> [<periods_count>]" && exit 1
+[ $# -lt 2 ] && echo "usage: $0 <host> <host_dir> [<periods_count> [<periods_skip>]]" && exit 1
 host=$1
 host_dir=$2
 periods_count=${3-1}
+periods_skip=${4-0}
 while read -u 3 extract_dir; do
+	if [ $periods_skip -gt 0 ]; then
+		periods_skip=$(($periods_skip-1))
+		continue
+	fi
 	do_release $host $host_dir $extract_dir
 done 3< <(ls -r1d $ANT_DIR/extract/* |head -n$periods_count)
 
