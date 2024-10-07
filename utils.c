@@ -252,7 +252,7 @@ kml_close(struct kml *kml)
 	free(kml);
 }
 
-#define DESCRIPTION_BUF_SIZE 65536
+#define DESCRIPTION_BUF_SIZE 131072
 void
 kml_add_placemark_point(struct kml *kml, int doc_id, const char *doc_name, int id, char *name, char *description, float lat, float lon, float haut, const char *haut_mode, const char *styleurl, const struct tm *ts_begin)
 {

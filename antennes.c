@@ -66,7 +66,7 @@ struct f_support {
 };
 
 #define SUPPORT_STA_MAX 100
-#define SUPPORT_DESCRIPTION_BUF_SIZE 65536
+#define SUPPORT_DESCRIPTION_BUF_SIZE 131072
 #define SUPPORT_CP_DEPT_MAX 0x99 /* departement INSEE */
 struct support {
 	int sup_id;
