@@ -242,7 +242,7 @@ struct bande_tree {
 
 /* antennes have an integer id, max value of 7878184 as of 20220729 obtained by:
  * $ cut -d';' -f2 tmp/extract/SUP_ANTENNE.txt  |sort -n |tail -n1 */
-#define ANTENNE_ID_MAX 10000000
+#define ANTENNE_ID_MAX 20000000
 #define ANTENNE_EMETTEUR_MAX 50
 struct f_antenne {
 	struct csv csv;
