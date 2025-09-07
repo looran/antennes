@@ -17,7 +17,8 @@ trace mkdir -p $DL_DIR
 trace mkdir -p $EXTRACT_DIR
 [ $offline -eq 0 ] && trace curl "https://www.data.gouv.fr/api/1/datasets/$ANTENNES_DATASET/" > $DL_DIR/dataset.json
 trace python -m json.tool $DL_DIR/dataset.json $DL_DIR/dataset_beautify.json
-cat $DL_DIR/dataset.json |jq -r ".resources[] | .last_modified+\";\"+.title+\";\"+.url+\";\"+.checksum.value" > $DL_DIR/urls.txt
+# starting 2025-08, checksum is no more in .checksum.value but only in .extras.checksum.value
+cat $DL_DIR/dataset.json |jq -r ".resources[] | .last_modified+\";\"+.title+\";\"+.url+\";\"+[.checksum.value // .extras.\"analysis:checksum\"][]" > $DL_DIR/urls.txt
 
 lastperiod=""
 sets_done=0
