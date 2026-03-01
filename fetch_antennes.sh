@@ -43,7 +43,9 @@ cat $DL_DIR/urls.txt |egrep "\.zip;" |while IFS=";" read published title url sum
     [ -e $DL_DIR/$filename -o $offline -eq 1 ] \
         && echo "file already downloaded" \
         || trace wget -P $DL_DIR "$url"
-    [ "$sum" != "$(trace sha1sum $DL_DIR/$filename |cut -d' ' -f1)" ] \
+    # fix 2025-10: missing checksum on reference tables
+    ([ "$sum" != "$(trace sha1sum $DL_DIR/$filename |cut -d' ' -f1)" ] \
+	    && [ ! $filename = "20250930-export-etalab-ref.zip" ]) \
         && echo "error: checksum verification failed for $DL_DIR/$filename" \
         && exit 1
     # fix 2015-04/05: file names are same between april and may
