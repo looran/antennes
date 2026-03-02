@@ -6,9 +6,8 @@ TMP_DIR="/tmp/antennes_release"
 trace() { echo "$ $*" >&2; "$@"; }
 
 do_release() {
-	host="$1"
-	host_dir="$2"
-	extract_dir="$3"
+	dest_dir="$1"
+	extract_dir="$2"
 	period="$(basename $extract_dir)"
 	latest_period="$(ls $ANT_DIR/extract/ |tail -n1)"
 	period_kml_prop=anfr_${period}_proprietaires.kml
@@ -24,12 +23,12 @@ do_release() {
 	trace rm -rf $TMP_DIR
 	trace mkdir -p $TMP_DIR
 
-	echo [+] generating KML files and statistics
+	echo [+] $period: generating KML files and statistics
 	mkdir $TMP_DIR/output $TMP_DIR/bands
 	trace $ANT_DIR/antennes -b $TMP_DIR/bands -k $TMP_DIR/output -s $extract_dir > $TMP_DIR/output/stats.txt
 	trace ls -lh $TMP_DIR/output
 
-	echo [+] renaming output files to prepend the period name
+	echo [+] $period: renaming output files to prepend the period name
 	trace mkdir $TMP_DIR/release
 	trace cp $TMP_DIR/output/anfr_proprietaires.kml $TMP_DIR/release/$period_kml_prop
 	trace cp $TMP_DIR/output/anfr_departements.kml $TMP_DIR/release/$period_kml_dept
@@ -48,46 +47,46 @@ do_release() {
 		cp "$f" "$TMP_DIR/release/$period_systeme/${period_systeme}_$(basename "$f" |cut -c14-)"
 	done
 
-	echo [+] copying release files to web server
-	trace ssh $host "mkdir -p $host_dir/split"
-	trace ssh $host "mkdir -p $host_dir/bands/$period"
-	trace scp $TMP_DIR/release/$period_stats $host:$host_dir
-	trace scp -r $TMP_DIR/release/anfr_${period}_proprietaire $host:$host_dir/split
-	trace scp -r $TMP_DIR/release/anfr_${period}_departement $host:$host_dir/split
-	trace scp -r $TMP_DIR/release/anfr_${period}_systeme $host:$host_dir/split
-	trace scp $TMP_DIR/bands/* $host:$host_dir/bands/$period
-	trace scp $TMP_DIR/release/$period_kml_prop $host:$host_dir
-	trace scp $TMP_DIR/release/$period_kml_dept $host:$host_dir
-	trace scp $TMP_DIR/release/$period_kml_dept_light $host:$host_dir
+	echo [+] $period: copying release files to destination directory
+	trace mkdir -p $dest_dir/split
+	trace mkdir -p $dest_dir/bands/$period
+	trace cp $TMP_DIR/release/$period_stats $dest_dir
+	trace cp $TMP_DIR/release/$period_kml_prop $dest_dir
+	trace cp $TMP_DIR/release/$period_kml_dept $dest_dir
+	trace cp $TMP_DIR/release/$period_kml_dept_light $dest_dir
+	trace cp -r $TMP_DIR/release/anfr_${period}_proprietaire $dest_dir/split
+	trace cp -r $TMP_DIR/release/anfr_${period}_departement $dest_dir/split
+	trace cp -r $TMP_DIR/release/anfr_${period}_systeme $dest_dir/split
+	trace cp $TMP_DIR/bands/* $dest_dir/bands/$period
 
 	if [ $latest_period = $period ]; then
-		echo [+] link release files as latest
+		echo [+] $period: duplicate release files as latest
 		latest_prefix=anfr_0000-latest
-		trace ssh $host "rm -f $host_dir/${latest_prefix}_proprietaires.kml && ln -s $period_kml_prop $host_dir/${latest_prefix}_proprietaires.kml"
-		trace ssh $host "rm -f $host_dir/${latest_prefix}_departements.kml && ln -s $period_kml_dept $host_dir/${latest_prefix}_departements.kml"
-		trace ssh $host "rm -f $host_dir/${latest_prefix}_departements_light.kml && ln -s $period_kml_dept_light $host_dir/${latest_prefix}_departements_light.kml"
-		trace ssh $host "rm -f $host_dir/${latest_prefix}_stats.txt && ln -s $period_stats $host_dir/${latest_prefix}_stats.txt"
-		trace ssh $host "rm -f $host_dir/split/${latest_prefix}_proprietaire && ln -s $period_proprietaire $host_dir/split/${latest_prefix}_proprietaire"
-		trace ssh $host "rm -f $host_dir/split/${latest_prefix}_departement && ln -s $period_departement $host_dir/split/${latest_prefix}_departement"
-		trace ssh $host "rm -f $host_dir/split/${latest_prefix}_systeme && ln -s $period_systeme $host_dir/split/${latest_prefix}_systeme"
+		trace rm -f $dest_dir/${latest_prefix}_stats.txt ; trace cp $dest_dir/$period_stats $dest_dir/${latest_prefix}_stats.txt
+		trace rm -f $dest_dir/${latest_prefix}_proprietaires.kml ; trace cp $dest_dir/$period_kml_prop $dest_dir/${latest_prefix}_proprietaires.kml
+		trace rm -f $dest_dir/${latest_prefix}_departements.kml ; trace cp $dest_dir/$period_kml_dept $dest_dir/${latest_prefix}_departements.kml
+		trace rm -f $dest_dir/${latest_prefix}_departements_light.kml ; trace cp $dest_dir/$period_kml_dept_light $dest_dir/${latest_prefix}_departements_light.kml
+		trace rm -rf $dest_dir/split/${latest_prefix}_proprietaire ; trace cp -r $dest_dir/split/$period_proprietaire $dest_dir/split/${latest_prefix}_proprietaire
+		trace rm -rf $dest_dir/split/${latest_prefix}_departement ; trace cp -r $dest_dir/split/$period_departement $dest_dir/split/${latest_prefix}_departement
+		trace rm -rf $dest_dir/split/${latest_prefix}_systeme ; trace cp -r $dest_dir/split/$period_systeme $dest_dir/split/${latest_prefix}_systeme
+		trace rm -rf $dest_dir/bands/${latest_prefix} ; trace cp -r $dest_dir/bands/$period $dest_dir/bands/${latest_prefix}
 	fi
 
-	echo [*] done, released files to $host:$host_dir
+	echo [*] $period: done, released files to $dest_dir
 }
 
 set -e
 
-[ $# -lt 2 ] && echo "usage: $0 <host> <host_dir> [<periods_count> [<periods_skip>]]" && exit 1
-host=$1
-host_dir=$2
-periods_count=${3-1}
-periods_skip=${4-0}
+[ $# -lt 1 ] && echo "usage: $0 <dest_dir> [<periods_count> [<periods_skip>]]" && exit 1
+dest_dir=$1
+periods_count=${2-1}
+periods_skip=${3-0}
 while read -u 3 extract_dir; do
 	if [ $periods_skip -gt 0 ]; then
 		periods_skip=$(($periods_skip-1))
 		continue
 	fi
-	do_release $host $host_dir $extract_dir
+	do_release $dest_dir $extract_dir
 done 3< <(ls -r1d $ANT_DIR/extract/* |head -n$periods_count)
 
 cat > $TMP_DIR/README.txt <<-_EOF
@@ -107,6 +106,6 @@ In bands/ you can find frequency band usage statistics in CSV files:
 
 files generated by https://github.com/looran/antennes on $(date)
 _EOF
-trace scp $TMP_DIR/README.txt $host:$host_dir
+trace cp $TMP_DIR/README.txt $dest_dir
 
 echo [*] all done
