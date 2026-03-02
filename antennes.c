@@ -186,7 +186,7 @@ struct f_station {
 
 /* emetteurs have an integer id, max value of 20308500 as of 20220729 obtained by:
  * $ cut -d';' -f1 SUP_EMETTEUR.txt |sort -n |tail -n1 */
-#define EMETTEUR_ID_MAX 30000000
+#define EMETTEUR_ID_MAX 40000000
 struct f_emetteur {
 	struct csv csv;
 	struct emetteur *table[EMETTEUR_ID_MAX];
