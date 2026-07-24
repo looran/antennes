@@ -196,7 +196,7 @@ struct f_emetteur {
 	int systeme_count;
 };
 
-#define EMETTEUR_BAND_MAX 50
+#define EMETTEUR_BAND_MAX 70
 struct emetteur {
 	int emr_id;
 	char *emr_id_str;
